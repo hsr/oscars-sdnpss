@@ -4,6 +4,6 @@
     - id:               eompls
       configGenerator:  "net.es.oscars.pss.eompls.junos.MXConfigGen"
     
-    - id:               stub
-      "configGenerator: "net.es.oscars.pss.stub.StubConfigGen"
+    - id:               sdn
+      "configGenerator: "net.es.oscars.pss.sdn.SdnConfigGen"
             

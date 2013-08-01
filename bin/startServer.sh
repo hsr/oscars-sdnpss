@@ -3,7 +3,7 @@
 context=$1
 pidfile=$2
 jarfile=$3
-shortname=stubPSS
+shortname=sdnPSS
 
 #set context 
 if [ -z "$context" ]; then

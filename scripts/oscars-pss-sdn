@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# Init file for OSCARS Stub PSS
+# Init file for OSCARS Sdn PSS
 #
 # chkconfig: 2345 65 20
-# description: OSCARS Stub PSS
+# description: OSCARS Sdn PSS
 #
 
 # Source function library.
@@ -11,9 +11,9 @@
 
 #Service specific variables
 SERVICE_NAME=PSSService
-SHORT_NAME=stubPSS
-PSS_NAME=stub
-LONG_NAME="OSCARS Stub PSS"
+SHORT_NAME=sdnPSS
+PSS_NAME=sdn
+LONG_NAME="OSCARS Sdn PSS"
 
 #OSCARS variables
 OSCARS_HOME=/etc/oscars

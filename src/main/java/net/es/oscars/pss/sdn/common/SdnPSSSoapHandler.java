@@ -1,10 +1,9 @@
-package net.es.oscars.pss.stub.common;
+package net.es.oscars.pss.sdn.common;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
-
+import net.es.oscars.common.soap.gen.OSCARSFaultReport;
 import net.es.oscars.logging.ErrSev;
 import net.es.oscars.logging.ModuleName;
 import net.es.oscars.logging.OSCARSNetLogger;
@@ -16,17 +15,19 @@ import net.es.oscars.pss.notify.CoordNotifier;
 import net.es.oscars.pss.soap.gen.ModifyReqContent;
 import net.es.oscars.pss.soap.gen.PSSPortType;
 import net.es.oscars.pss.soap.gen.SetupReqContent;
-import net.es.oscars.common.soap.gen.OSCARSFaultReport;
 import net.es.oscars.pss.soap.gen.StatusReqContent;
 import net.es.oscars.pss.soap.gen.TeardownReqContent;
 import net.es.oscars.utils.sharedConstants.ErrorCodes;
 import net.es.oscars.utils.soap.ErrorReport;
 import net.es.oscars.utils.svc.ServiceNames;
-
-import org.ogf.schema.network.topology.ctrlplane.CtrlPlaneHopContent;
-
 import net.es.oscars.utils.topology.NMWGParserUtil;
 
+import org.apache.log4j.Logger;
+import org.ogf.schema.network.topology.ctrlplane.CtrlPlaneHopContent;
+
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.WebResource;
 
 final class NetDeviceLink {
 	public String srcNetDevice;
@@ -45,7 +46,7 @@ final class NetDeviceLink {
 /**
  * main entry point for PSS
  *
- * @author haniotak,mrt
+ * @author Henrique Rodrigues <hsr@cs.ucsd.edu>
  *
  */
 @javax.jws.WebService(
@@ -55,16 +56,16 @@ final class NetDeviceLink {
         endpointInterface = "net.es.oscars.pss.soap.gen.PSSPortType")
 @javax.xml.ws.BindingType(value = "http://www.w3.org/2003/05/soap/bindings/HTTP/")
 
-public class StubPSSSoapHandler implements PSSPortType {
+public class SdnPSSSoapHandler implements PSSPortType {
 
-    private static final Logger log = Logger.getLogger(StubPSSSoapHandler.class.getName());
+    private static final Logger log = Logger.getLogger(SdnPSSSoapHandler.class.getName());
     private static final String moduleName = ModuleName.PSS;
 
     private List<NetDeviceLink> getNetDeviceLinks(List<CtrlPlaneHopContent> hops) {
     	List<NetDeviceLink> netDevices = new ArrayList<NetDeviceLink>();
     	String src = null;
     	
-    	log.info(StubPSSSoapHandler.class.getName());
+    	log.info(SdnPSSSoapHandler.class.getName());
     	
     	int i = 1;
         try {
@@ -223,6 +224,16 @@ public class StubPSSSoapHandler implements PSSPortType {
     	return true;
     }
     
+    private void testJersey() {
+    	String url = "http://localhost:8080/"; 
+    	WebResource resource = Client.create().resource(url);
+    	ClientResponse response = resource.get(ClientResponse.class);
+    	
+    	log.info( String.format( "GET on [%s], status code [%d]",
+    	        url, response.getStatus() ) );
+    	response.close();
+    }
+    
     private void sendFloodlightNewFlowRequest(String jsonObject, String controller) {
     	exec("curl -s -d " + jsonObject + " " + controller);
     }
@@ -256,7 +267,12 @@ public class StubPSSSoapHandler implements PSSPortType {
  
         String reservationID = setupReq.getReservation().getGlobalReservationId();
         
+        
+        
      	log.info("Setting up reservation: " + reservationID);
+     	
+     	//testJersey();
+     	
         try {
         	netDevices = getNetDeviceLinks(setupReq.getReservation().
         									getReservedConstraint().
@@ -288,7 +304,7 @@ public class StubPSSSoapHandler implements PSSPortType {
                 faultReport.setErrorMsg("Floodlight setup failed error");
                 faultReport.setErrorType(ErrorReport.SYSTEM);
                 faultReport.setErrorCode(ErrorCodes.PATH_SETUP_FAILED);
-                faultReport.setModuleName("StubPSS");
+                faultReport.setModuleName("SdnPSS");
 
                 act.setFaultReport(faultReport);
                 act.setStatus(ActionStatus.FAIL);
@@ -343,7 +359,7 @@ public class StubPSSSoapHandler implements PSSPortType {
                 faultReport.setErrorMsg("simulated PSS error");
                 faultReport.setErrorType(ErrorReport.SYSTEM);
                 faultReport.setErrorCode(ErrorCodes.PATH_TEARDOWN_FAILED);
-                faultReport.setModuleName("StubPSS");
+                faultReport.setModuleName("SdnPSS");
                 act.setFaultReport(faultReport);
                 act.setStatus(ActionStatus.FAIL);
             }

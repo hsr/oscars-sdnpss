@@ -5,8 +5,8 @@ soap:
 
 
 circuitService:
-    id:                 'stub'
-    stub:               true
+    id:                 'sdn'
+    sdn:               true
     logRequest:         true
     logResponse:        true
     
@@ -16,27 +16,27 @@ definitions:
 
 # generic impl / params config from here on
 verify:
-    impl:               'net.es.oscars.pss.stub.StubVerifier'
+    impl:               'net.es.oscars.pss.sdn.SdnVerifier'
     params:
 
 notify:
-    impl:               'net.es.oscars.pss.stub.StubNotifier'
+    impl:               'net.es.oscars.pss.sdn.SdnNotifier'
 
 connectorDirectory:
-    impl:               'net.es.oscars.pss.stub.StubConnectorDirectory'
+    impl:               'net.es.oscars.pss.sdn.SdnConnectorDirectory'
 
 deviceConnectorMap:
-    impl:               'net.es.oscars.pss.stub.StubDeviceConnectorMap'
+    impl:               'net.es.oscars.pss.sdn.SdnDeviceConnectorMap'
 
 deviceModelMap:
-    impl:               'net.es.oscars.pss.stub.StubDeviceModelMap'
+    impl:               'net.es.oscars.pss.sdn.SdnDeviceModelMap'
 
 deviceResolve:            
-    impl:               'net.es.oscars.pss.stub.StubDeviceAddressResolver'
+    impl:               'net.es.oscars.pss.sdn.SdnDeviceAddressResolver'
 
 workflow:
     impl:               'net.es.oscars.pss.workflow.FifoWF'
 
 validate:
-    impl:               'net.es.oscars.pss.stub.StubValidator'
+    impl:               'net.es.oscars.pss.sdn.SdnValidator'
 

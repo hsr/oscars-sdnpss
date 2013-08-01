@@ -1,12 +1,12 @@
-package net.es.oscars.pss.stub.common;
+package net.es.oscars.pss.sdn.common;
 
 import static java.util.Arrays.asList;
 
 import java.net.URL;
 
-import org.apache.log4j.Logger;
-import org.hibernate.exception.ExceptionUtils;
-
+import joptsimple.OptionParser;
+import joptsimple.OptionSet;
+import joptsimple.OptionSpec;
 import net.es.oscars.logging.ErrSev;
 import net.es.oscars.logging.ModuleName;
 import net.es.oscars.logging.OSCARSNetLogger;
@@ -15,12 +15,10 @@ import net.es.oscars.pss.util.ClassFactory;
 import net.es.oscars.utils.config.ConfigDefaults;
 import net.es.oscars.utils.config.ConfigException;
 import net.es.oscars.utils.config.ContextConfig;
-import net.es.oscars.utils.soap.OSCARSSoapService;
 import net.es.oscars.utils.svc.ServiceNames;
 
-import joptsimple.OptionParser;
-import joptsimple.OptionSet;
-import joptsimple.OptionSpec;
+import org.apache.log4j.Logger;
+import org.hibernate.exception.ExceptionUtils;
 
 public class Invoker {
     private static ContextConfig cc = ContextConfig.getInstance(ServiceNames.SVC_PSS);
@@ -46,10 +44,10 @@ public class Invoker {
             System.exit(-1);
         }
         OSCARSNetLogger netLogger = OSCARSNetLogger.getTlogger();
-        String event = "StubPSSinit";
+        String event = "SdnPSSinit";
         netLogger.init(ModuleName.PSS, "0000");
         LOG.debug("CXF config at: "+cc.getFilePath(ConfigDefaults.CXF_SERVER));
-        StubPSSSoapServer.setSSLBusConfiguration(
+        SdnPSSSoapServer.setSSLBusConfiguration(
                 new URL("file:" + cc.getFilePath(ConfigDefaults.CXF_SERVER)));
 
         if (mode.equals("server")) {
@@ -57,7 +55,7 @@ public class Invoker {
             fac.configure();
             try {
                 LOG.info(netLogger.start(event));
-                StubPSSSoapServer server = StubPSSSoapServer.getInstance();
+                SdnPSSSoapServer server = SdnPSSSoapServer.getInstance();
                 server.startServer(false);
                 LOG.info(netLogger.end(event));
             } catch (Exception ex) {

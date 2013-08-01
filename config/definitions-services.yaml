@@ -1,7 +1,7 @@
 ---
 
--   id:     "stub"
-    impl:   "net.es.oscars.pss.stub.StubService"
+-   id:     "sdn"
+    impl:   "net.es.oscars.pss.sdn.SdnService"
 
 
 -   id:     "eompls"

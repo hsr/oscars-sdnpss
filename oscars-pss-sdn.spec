@@ -1,6 +1,6 @@
-%define package_name stubPSS 
+%define package_name sdnPSS 
 %define service_name PSSService
-%define pss_name stub
+%define pss_name sdn
 %define mvn_project_list common-libs,common-logging,common-soap,utils,pss,%{package_name}
 %define install_base /opt/oscars/%{package_name}
 %define oscars_home /etc/oscars
@@ -11,7 +11,7 @@
 Name:           oscars-pss-%{pss_name}
 Version:        0.6
 Release:        %{relnum}
-Summary:        OSCARS Stub PSS
+Summary:        OSCARS Sdn PSS
 License:        distributable, see LICENSE
 Group:          Development/Libraries
 URL:            http://code.google.com/p/oscars-idc/
@@ -26,7 +26,7 @@ Requires:       java-1.6.0-openjdk
 Requires:       chkconfig
 
 %description
-An OSCARS PSS used for development and testing. Acts as a stub and cannot configure any network devices. 
+An OSCARS PSS used for development and testing. Acts as a sdn and cannot configure any network devices. 
 
 %pre
 /usr/sbin/groupadd oscars 2> /dev/null || :

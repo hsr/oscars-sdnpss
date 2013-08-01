@@ -1,14 +1,14 @@
 ---
 PSSService:
     UNITTEST:
-        config.yaml:        'OSCARS_DIST/stubPSS/config/config.HTTP.yaml'
-        server-cxf.xml:     'OSCARS_DIST/stubPSS/config/server-cxf-http.xml'
-        client-cxf.xml:     'OSCARS_DIST/stubPSS/config/client-cxf-http.xml'
-        log4j.properties:   'OSCARS_DIST/stubPSS/config/log4j.INFO.properties'
+        config.yaml:        'OSCARS_DIST/sdnPSS/config/config.HTTP.yaml'
+        server-cxf.xml:     'OSCARS_DIST/sdnPSS/config/server-cxf-http.xml'
+        client-cxf.xml:     'OSCARS_DIST/sdnPSS/config/client-cxf-http.xml'
+        log4j.properties:   'OSCARS_DIST/sdnPSS/config/log4j.INFO.properties'
         PSSService.xsd:     'OSCARS_DIST/common-soap/src/main/resources/pss/pss.xsd'
         PSSService.wsdl:    'OSCARS_DIST/common-soap/src/main/resources/pss/pss.wsdl'
-        defs-models.yaml:   'OSCARS_DIST/stubPSS/config/defs-models.yaml'
-        defs-services.yaml: 'OSCARS_DIST/stubPSS/config/defs-services.yaml'
+        defs-models.yaml:   'OSCARS_DIST/sdnPSS/config/defs-models.yaml'
+        defs-services.yaml: 'OSCARS_DIST/sdnPSS/config/defs-services.yaml'
 
     DEVELOPMENT:
         config.yaml:        'OSCARS_HOME/PSSService/conf/config.HTTP.yaml'
