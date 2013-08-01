@@ -6,9 +6,8 @@
     <version>0.0.1-SNAPSHOT</version>
   </parent>
 
-  <artifactId>stubPSS</artifactId>
-  <name>Stub PSS component</name>
-
+  <artifactId>sdnPSS</artifactId>
+  <name>Sdn PSS component</name>
 
     <!-- puts all code & libraries in one jar -->
     <pluginRepositories>
@@ -17,7 +16,16 @@
             <url>http://onejar-maven-plugin.googlecode.com/svn/mavenrepo</url>
         </pluginRepository>
     </pluginRepositories>
-
+	
+    <repositories>
+      <repository>
+          <id>OSCARS</id>
+          <name>OSCARS Maven Repository</name>
+          <layout>default</layout>
+          <url>file:///${basedir}/../common-libs/repo</url>
+      </repository>
+    </repositories>
+    
     <dependencies>
         <!-- common SOAP interfaces (from local repository) -->
         <dependency>
@@ -85,6 +93,14 @@
             <version>3.2</version>
             <scope>runtime</scope>
         </dependency>
+		
+        <!-- jersey -->
+       <dependency>
+           <groupId>com.sun.jersey</groupId>
+           <artifactId>jersey-bundle</artifactId>
+           <version>1.17.1</version>
+       </dependency>
+		
 
         <!-- CXF -->
         <dependency>
@@ -115,7 +131,7 @@
                 <executions>
                     <execution>
                         <configuration>
-                            <mainClass>net.es.oscars.pss.stub.common.Invoker</mainClass>
+                            <mainClass>net.es.oscars.pss.sdn.common.Invoker</mainClass>
                             <classifier>onejar</classifier>
                         </configuration>
                         <goals>
