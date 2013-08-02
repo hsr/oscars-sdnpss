@@ -4,9 +4,10 @@ soap:
 
 circuitService:
     id:                 'sdn'
-    sdn:               true
     logRequest:         true
     logResponse:        true
+    params:
+        controller: "http://student6.es.net:8080"
 
 definitions:
     models:             'defs-models.yaml'
@@ -14,27 +15,28 @@ definitions:
 
 # generic impl / params config from here on
 verify:
-    impl:               'net.es.oscars.pss.sdn.SdnVerifier'
-    params:
+    impl:               'net.es.oscars.pss.stub.StubVerifier'
 
 notify:
-    impl:               'net.es.oscars.pss.sdn.SdnNotifier'
+    impl:               'net.es.oscars.pss.notify.CoordNotifier'
+    params: 
+        coordUrl:       'https://localhost:9003/OSCARS/Coord'
 
 connectorDirectory:
-    impl:               'net.es.oscars.pss.sdn.SdnConnectorDirectory'
+    impl:               'net.es.oscars.pss.stub.StubConnectorDirectory'
 
 deviceConnectorMap:
-    impl:               'net.es.oscars.pss.sdn.SdnDeviceConnectorMap'
+    impl:               'net.es.oscars.pss.stub.StubDeviceConnectorMap'
 
 deviceModelMap:
-    impl:               'net.es.oscars.pss.sdn.SdnDeviceModelMap'
+    impl:               'net.es.oscars.pss.stub.StubDeviceModelMap'
 
-deviceResolve:            
-    impl:               'net.es.oscars.pss.sdn.SdnDeviceAddressResolver'
+deviceResolve:
+    impl:               'net.es.oscars.pss.stub.StubDeviceAddressResolver'
 
 workflow:
     impl:               'net.es.oscars.pss.workflow.FifoWF'
 
 validate:
-    impl:               'net.es.oscars.pss.sdn.SdnValidator'
+    impl:               'net.es.oscars.pss.stub.StubValidator'
 

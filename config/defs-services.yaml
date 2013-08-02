@@ -1,8 +1,4 @@
 ---
 
 -   id:     "sdn"
-    impl:   "net.es.oscars.pss.sdn.SdnCircuitService"
-
-
--   id:     "eompls"
-    impl:   "net.es.oscars.pss.eompls.EoMPLSService"
+    impl:   "net.es.oscars.pss.stub.StubCircuitService"
