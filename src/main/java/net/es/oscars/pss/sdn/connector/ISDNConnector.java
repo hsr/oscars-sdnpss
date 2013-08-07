@@ -5,7 +5,9 @@ package net.es.oscars.pss.sdn.connector;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 
+import net.es.oscars.pss.sdn.common.SDNLink;
 import net.es.oscars.pss.sdn.common.SDNNode;
 
 /**
@@ -54,5 +56,25 @@ public interface ISDNConnector {
     public ISDNConnectorResponse deleteEntry(SDNNode sdnNode,
     		HashMap<String,Object> entryParams) throws IOException;
     
-	
+
+    /**
+     * SDN Connector specific implementation of a circuit setup action with the given 
+     * list of hops.
+     * 
+     * @param links a list of SDNLinks (List<SDNLink>) that describes each hop in the circuit
+     * @throws IOException
+     */
+	public ISDNConnectorResponse setupCircuit(List<SDNLink> links,
+			String circuitID) throws IOException;
+    
+    /**
+     * SDN Connector implementation of a circuit teardown action with the given 
+     * list of hops.
+     * 
+     * @param links a list of SDNLinks (List<SDNLink>) that describes each hop in the circuit
+     * @throws IOException
+     */	
+	public ISDNConnectorResponse teardownCircuit(List<SDNLink> links,
+			String circuitID) throws IOException;
+
 }

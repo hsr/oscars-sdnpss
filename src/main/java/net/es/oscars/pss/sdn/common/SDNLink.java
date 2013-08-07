@@ -2,7 +2,10 @@ package net.es.oscars.pss.sdn.common;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 import org.ogf.schema.network.topology.ctrlplane.CtrlPlaneHopContent;
 
@@ -14,9 +17,7 @@ import com.fasterxml.jackson.databind.MappingJsonFactory;
 import net.es.oscars.utils.topology.NMWGParserUtil;
 
 public class SDNLink {
-	private SDNNode node;
-
-	// TODO: add getters and setters
+	private SDNNode node = null;
 	public String srcNode = null;
 	public String dstNode = null;
 	public String srcPort = null;
@@ -33,7 +34,8 @@ public class SDNLink {
 	}
 
 	/**
-	 * Checks if all the attributes are set.	
+	 * Checks if all the attributes are set.
+	 * 
 	 * @return
 	 */
 	public boolean isComplete() {
@@ -57,15 +59,15 @@ public class SDNLink {
 	/**
 	 * Empty constructor
 	 */
-	public SDNLink() {}
+	public SDNLink() {
+	}
 
+	// @formatter:off
 	/**
 	 * Construct link from two URNs
 	 * 
-	 * @param srcURN
-	 *            URN that describes source of the link
-	 * @param dstURN
-	 *            URN that describes destination of the link
+	 * @param srcURN URN that describes source of the link
+	 * @param dstURN URN that describes destination of the link
 	 */
 	public SDNLink(String srcURN, String dstURN) {
 		this.srcNode = NMWGParserUtil.getURNPart(srcURN, NMWGParserUtil.NODE_TYPE);
@@ -75,6 +77,7 @@ public class SDNLink {
 		this.srcLink = NMWGParserUtil.getURNPart(srcURN, NMWGParserUtil.LINK_TYPE);
 		this.dstLink = NMWGParserUtil.getURNPart(dstURN, NMWGParserUtil.LINK_TYPE);
 	}
+	// @formatter:on
 
 	/**
 	 * Extract links from a CtrlPlaneHopContent object and returns them as a
@@ -119,8 +122,7 @@ public class SDNLink {
 	 * Extract links from a serialized JSON array object and returns them as a
 	 * list of SDNLinks
 	 * 
-	 * @param fmJson
-	 *            an serialized JSON array object with link descriptions
+	 * @param fmJson an serialized JSON array object with link descriptions
 	 * @return list of SDNLinks
 	 * @throws IOException
 	 */
@@ -188,47 +190,48 @@ public class SDNLink {
 		return links;
 	}
 
-	public void setSrcNode(String srcNode) {
-		this.srcNode = srcNode;
+	/**
+	 * Build a list with SDNNode objects from a list of SDNLink objects. Nodes
+	 * created in this method contain an updated list of links connecting them.
+	 * 
+	 * @param fmJson
+	 *            an serialized JSON array object with link descriptions
+	 * @return list of SDNLinks
+	 * @throws Exception
+	 * @throws IOException
+	 */
+	public static List<SDNNode> getSDNNodeMapFromSDNLinks(List<SDNLink> links) throws Exception {
+		// TODO: move graph/topology related static methods to a more general graph object
+		// TODO: implement a more descriptive Exception
+		Map<String, SDNNode> nodes = new HashMap<String,SDNNode> ();
+		SDNNode node;
+		
+		for (SDNLink link : links) {
+			if (nodes.containsKey(link.getSrcNode())) {
+				node = nodes.get(link.getSrcNode());
+			}
+			else {
+				node = new SDNNode(link.getSrcNode());
+				nodes.put(node.getId(), node);
+			}
+			link.setNode(node);
+			node.addLink(link);
+		}
+		return (List<SDNNode>) nodes.values();
 	}
 
-	public String getDstNode() {
-		return dstNode;
-	}
+	// @formatter:off
+	public void   setSrcNode(String srcNode) { this.srcNode = srcNode; }
+	public void   setDstNode(String dstNode) { this.dstNode = dstNode; }
+	public void   setSrcPort(String srcPort) { this.srcPort = srcPort; }
+	public void   setDstPort(String dstPort) { this.dstPort = dstPort; }
+	public void   setSrcLink(String srcLink) { this.srcLink = srcLink; }
+	public void   setDstLink(String dstLink) { this.dstLink = dstLink; }
+	public String getSrcNode() { return srcNode; }
+	public String getDstNode() { return dstNode; }
+	public String getSrcPort() { return srcPort; }
+	public String getDstPort() { return dstPort; }
+	public String getSrcLink() { return srcLink; }
+	public String getDstLink() { return dstLink; }
 
-	public void setDstNode(String dstNode) {
-		this.dstNode = dstNode;
-	}
-
-	public String getSrcPort() {
-		return srcPort;
-	}
-
-	public void setSrcPort(String srcPort) {
-		this.srcPort = srcPort;
-	}
-
-	public String getDstPort() {
-		return dstPort;
-	}
-
-	public void setDstPort(String dstPort) {
-		this.dstPort = dstPort;
-	}
-
-	public String getSrcLink() {
-		return srcLink;
-	}
-
-	public void setSrcLink(String srcLink) {
-		this.srcLink = srcLink;
-	}
-
-	public String getDstLink() {
-		return dstLink;
-	}
-
-	public void setDstLink(String dstLink) {
-		this.dstLink = dstLink;
-	}
 }
