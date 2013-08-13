@@ -18,6 +18,7 @@ import net.es.oscars.pss.soap.gen.PSSPortType;
 import net.es.oscars.pss.soap.gen.SetupReqContent;
 import net.es.oscars.pss.soap.gen.StatusReqContent;
 import net.es.oscars.pss.soap.gen.TeardownReqContent;
+import net.es.oscars.topoBridge.sdn.SDNLink;
 import net.es.oscars.utils.sharedConstants.ErrorCodes;
 import net.es.oscars.utils.soap.ErrorReport;
 import net.es.oscars.utils.svc.ServiceNames;

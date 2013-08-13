@@ -7,8 +7,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 
-import net.es.oscars.pss.sdn.common.SDNLink;
-import net.es.oscars.pss.sdn.common.SDNNode;
+import net.es.oscars.topoBridge.sdn.SDNLink;
+import net.es.oscars.topoBridge.sdn.SDNNode;
 
 /**
  * This interface describes how OSCARS connects to a SDN 

@@ -6,8 +6,8 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import net.es.oscars.pss.sdn.common.SDNLink;
-import net.es.oscars.pss.sdn.common.SDNNode;
+import net.es.oscars.topoBridge.sdn.SDNLink;
+import net.es.oscars.topoBridge.sdn.SDNNode;
 
 /**
  * Implements the Floodlight SDN connector: the interface that OSCARS use to talk to Floodlight
@@ -112,11 +112,11 @@ public class FloodlightSDNConnector implements ISDNConnector {
 			HashMap<String,Object> forwardEntry = new HashMap<String,Object>(), 
 								   reverseEntry = new HashMap<String,Object>();
 			
-			forwardEntry.put("src",  l.srcPort);
-			forwardEntry.put("dst",  l.dstPort);
+			forwardEntry.put("src",  l.getSrcPort());
+			forwardEntry.put("dst",  l.getDstPort());
 			
-			reverseEntry.put("src",  l.dstPort);
-			reverseEntry.put("dst",  l.srcPort);
+			reverseEntry.put("src",  l.getDstPort());
+			reverseEntry.put("dst",  l.getSrcPort());
 			
 			for (FLCircuitProto p : FLCircuitProto.values()) {
 				String entryID = circuitID + "." + p.toString() + "." + l.getNode().getId();
@@ -146,7 +146,7 @@ public class FloodlightSDNConnector implements ISDNConnector {
 		for(SDNLink l : links) {
 			HashMap<String,Object> entry = new HashMap<String,Object>();
 			
-			entry.put("node", l.srcNode.replaceAll("\\.", ":"));
+			entry.put("node", l.getSrcNode().replaceAll("\\.", ":"));
 			
 			for (FLCircuitProto p : FLCircuitProto.values()) {
 				String entryID = circuitID + "." + p.toString() + "." + l.getNode().getId();
