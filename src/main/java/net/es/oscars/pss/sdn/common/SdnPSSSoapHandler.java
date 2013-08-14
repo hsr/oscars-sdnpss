@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 
 import net.es.oscars.common.soap.gen.OSCARSFaultReport;
-import net.es.oscars.logging.ErrSev;
 import net.es.oscars.logging.ModuleName;
 import net.es.oscars.logging.OSCARSNetLogger;
 import net.es.oscars.pss.beans.PSSAction;
@@ -69,7 +68,6 @@ public class SdnPSSSoapHandler implements PSSPortType {
 				.getParams();
 		
 		try {
-			
 			if (circuitServiceParams.containsKey("controller")) {
 				sdnConnector.setConnectionAddress(circuitServiceParams
 						.get("controller"));
@@ -88,7 +86,7 @@ public class SdnPSSSoapHandler implements PSSPortType {
 			}
 		}
 		catch (Exception e) {
-			log.warn("Couldn't teardown circuit: " + e.getMessage());
+			log.error("Couldn't setup circuit: " + e.getMessage());
 		}
 		
 		notifyCoordinator(setupReq.getTransactionId(), 
@@ -136,7 +134,7 @@ public class SdnPSSSoapHandler implements PSSPortType {
 			}
 		}
 		catch (Exception e) {
-			log.warn("Couldn't teardown circuit: " + e.getMessage());
+			log.error("Couldn't teardown circuit: " + e.getMessage());
 		}
 		
 		notifyCoordinator(teardownReq.getTransactionId(), 
