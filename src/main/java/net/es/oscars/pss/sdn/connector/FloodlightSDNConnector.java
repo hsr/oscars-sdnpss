@@ -3,6 +3,7 @@ package net.es.oscars.pss.sdn.connector;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.restlet.resource.ClientResource;
@@ -11,65 +12,77 @@ import net.es.oscars.topoBridge.sdn.SDNLink;
 import net.es.oscars.topoBridge.sdn.SDNNode;
 
 /**
- * Implements the Floodlight SDN connector: the interface that OSCARS use to talk to Floodlight
+ * Implements the Floodlight SDN connector: the interface that OSCARS use to
+ * talk to Floodlight
  * 
  * @author Henrique Rodrigues <hsr@cs.ucsd.edu>
- *
+ * 
  */
 public class FloodlightSDNConnector implements ISDNConnector {
 	private String controller = null;
-	private static final Logger log = Logger.getLogger(FloodlightSDNConnector.class.getName());
+	private static Map<SDNLink, Integer> linkRefCount = null;
+	private static final Logger log = Logger
+			.getLogger(FloodlightSDNConnector.class.getName());
 
 	/**
-	 * Floodlight circuits on emulated L2 switches aren't purely in->out port mappings.  
+	 * Floodlight circuits on emulated L2 switches aren't purely in->out port
+	 * mappings.
 	 */
 	private enum FLCircuitProto {
-        IP("0x800"),
-        ARP("0x806");
+		IP("0x800"), ARP("0x806");
 
-        private final String value;
-        FLCircuitProto (String v) {
-            value = v;
-        }
+		private final String value;
+
+		FLCircuitProto(String v) {
+			value = v;
+		}
 	}
 
 	public FloodlightSDNConnector() {
 		controller = null;
+		linkRefCount = new HashMap<SDNLink, Integer>();
 	}
 
 	public FloodlightSDNConnector(String address) {
 		controller = address;
 	}
-	
+
 	@Override
 	public ISDNConnectorResponse setConnectionAddress(String address) {
 		// TODO: check if we can establish a connection to the controller
 		controller = address;
 		return ISDNConnectorResponse.SUCCESS;
 	}
-	
-    @Override
+
+	@Override
 	public ISDNConnectorResponse setupCircuit(List<SDNLink> links,
 			String circuitID) throws IOException {
 		if (controller == null) {
 			return ISDNConnectorResponse.CONTROLLER_NOT_SET;
 		}
-		
+
 		ISDNConnectorResponse response;
-		
-		for(SDNLink l : links) {
-			HashMap<String,Object> forwardEntry = new HashMap<String,Object>(), 
-								   reverseEntry = new HashMap<String,Object>();
-			
-			forwardEntry.put("src",  l.getSrcPort());
-			forwardEntry.put("dst",  l.getDstPort());
-			
-			reverseEntry.put("src",  l.getDstPort());
-			reverseEntry.put("dst",  l.getSrcPort());
-			
+
+		for (SDNLink l : links) {
+			if (linkRefCount.containsKey(l)) {
+				linkRefCount.put(l, new Integer(linkRefCount.get(l) + 1));
+				continue;
+			}
+			linkRefCount.put(l, new Integer(1));
+
+			HashMap<String, Object> forwardEntry = new HashMap<String, Object>(),
+									reverseEntry = new HashMap<String, Object>();
+
+			forwardEntry.put("src", l.getSrcPort());
+			forwardEntry.put("dst", l.getDstPort());
+
+			reverseEntry.put("src", l.getDstPort());
+			reverseEntry.put("dst", l.getSrcPort());
+
 			for (FLCircuitProto p : FLCircuitProto.values()) {
-				String entryID = circuitID + "." + p.toString() + "." + l.getNode().getId();
-				
+				String entryID = circuitID + "." + p.toString() + "."
+						+ l.getNode().getId();
+
 				forwardEntry.put("id", entryID + ".F");
 				forwardEntry.put("proto", p.value);
 
@@ -79,13 +92,13 @@ public class FloodlightSDNConnector implements ISDNConnector {
 				response = installEntry(l.getNode(), forwardEntry);
 				if (response != ISDNConnectorResponse.SUCCESS)
 					return ISDNConnectorResponse.FAILURE;
-				
+
 				response = installEntry(l.getNode(), reverseEntry);
 				if (response != ISDNConnectorResponse.SUCCESS)
 					return ISDNConnectorResponse.FAILURE;
 			}
 		}
-		
+
 		return ISDNConnectorResponse.SUCCESS;
 	}
 
@@ -95,35 +108,47 @@ public class FloodlightSDNConnector implements ISDNConnector {
 		if (controller == null) {
 			return ISDNConnectorResponse.CONTROLLER_NOT_SET;
 		}
-		
+
 		ISDNConnectorResponse response;
-		
-		for(SDNLink l : links) {
-			HashMap<String,Object> entry = new HashMap<String,Object>();
-			
+
+		for (SDNLink l : links) {
+			HashMap<String, Object> entry = new HashMap<String, Object>();
+
+			if (!linkRefCount.containsKey(l)) {
+				log.warn("FloodlightSDNConnector: where this link came from?");
+			} else if (linkRefCount.get(l) > 1) {
+
+				linkRefCount.put(l, new Integer(linkRefCount.get(l) - 1));
+				continue;
+			} else {
+				linkRefCount.remove(l);
+			}
+
 			entry.put("node", l.getSrcNode().replaceAll("\\.", ":"));
-			
+
 			for (FLCircuitProto p : FLCircuitProto.values()) {
-				String entryID = circuitID + "." + p.toString() + "." + l.getNode().getId();
-				
+				String entryID = circuitID + "." + p.toString() + "."
+						+ l.getNode().getId();
+
 				entry.put("id", entryID + ".F");
-				response = deleteEntry(l.getNode(), entry); 
+				response = deleteEntry(l.getNode(), entry);
 				if (response != ISDNConnectorResponse.SUCCESS)
 					return ISDNConnectorResponse.FAILURE;
-					
+
 				entry.put("id", entryID + ".R");
-				response = deleteEntry(l.getNode(), entry); 
+				response = deleteEntry(l.getNode(), entry);
 				if (response != ISDNConnectorResponse.SUCCESS)
 					return ISDNConnectorResponse.FAILURE;
 			}
 		}
-		
+
 		return ISDNConnectorResponse.SUCCESS;
 	}
-	
-    /**
-	 * Requests Floodlight staticflowentrypusher to install a given entry. The resulting
-	 * call generated by this method seems like this:
+
+	// @formatter:off
+	/**
+	 * Requests Floodlight staticflowentrypusher to install a given entry. The
+	 * resulting call generated by this method seems like this:
 	 * 
 	 * {
 	 * 	"switch": "00:00:00:00:00:00:00:07",
@@ -136,9 +161,10 @@ public class FloodlightSDNConnector implements ISDNConnector {
 	 * 	"actions":"output=3"
 	 * }
 	 * 
-	 * @param node the SDNNode that will receive the new entry
-	 * @param entryParams 
-	 * 		Contains sets of key,value pairs describing the entry.
+	 * @param node
+	 *            the SDNNode that will receive the new entry
+	 * @param entryParams
+	 *            Contains sets of key,value pairs describing the entry.
 	 */
 	@Override
 	public ISDNConnectorResponse installEntry(SDNNode node,
@@ -212,23 +238,25 @@ public class FloodlightSDNConnector implements ISDNConnector {
     	}
 		return ISDNConnectorResponse.SUCCESS;
 	}
-	
+	// @formatter:on
+
 	private void store(String request) throws IOException {
 		try {
-			ClientResource cr = new ClientResource(controller + "/wm/staticflowentrypusher/json/store");
+			ClientResource cr = new ClientResource(controller
+					+ "/wm/staticflowentrypusher/json/store");
 			cr.post(request);
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			throw new IOException(e.getMessage());
 		}
 	}
-	
+
 	private void delete(String request) throws IOException {
-		ClientResource cr = new ClientResource(controller + "/wm/staticflowentrypusher/json/delete");
+		ClientResource cr = new ClientResource(controller
+				+ "/wm/staticflowentrypusher/json/delete");
+
 		try {
 			cr.post(request);
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			throw new IOException(e.getMessage());
 		}
 	}
