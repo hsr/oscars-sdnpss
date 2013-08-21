@@ -21,6 +21,7 @@ import net.es.oscars.pss.soap.gen.PSSPortType;
 import net.es.oscars.pss.soap.gen.SetupReqContent;
 import net.es.oscars.pss.soap.gen.StatusReqContent;
 import net.es.oscars.pss.soap.gen.TeardownReqContent;
+import net.es.oscars.topoBridge.sdn.BaseSDNTopologyService;
 import net.es.oscars.topoBridge.sdn.SDNLink;
 import net.es.oscars.utils.sharedConstants.ErrorCodes;
 import net.es.oscars.utils.soap.ErrorReport;
@@ -54,7 +55,7 @@ public class SdnPSSSoapHandler implements PSSPortType {
 		log.info(netLogger.start(event));
 
 		try {
-			sdnLinks = SDNLink.extractSDNLinks(setupReq.getReservation()
+			sdnLinks = BaseSDNTopologyService.extractSDNLinks(setupReq.getReservation()
 					.getReservedConstraint().getPathInfo().getPath().getHop());
 		} catch (Exception e) {
 			log.info("Couldn't get path: " + e.getMessage());
@@ -105,7 +106,7 @@ public class SdnPSSSoapHandler implements PSSPortType {
         log.info(netLogger.start("teardown"));
 
 		try {
-			sdnLinks = SDNLink.extractSDNLinks(teardownReq.getReservation()
+			sdnLinks = BaseSDNTopologyService.extractSDNLinks(teardownReq.getReservation()
 					.getReservedConstraint().getPathInfo().getPath().getHop());
 		} catch (Exception e) {
 			log.info("Couldn't get path: " + e.getMessage());
