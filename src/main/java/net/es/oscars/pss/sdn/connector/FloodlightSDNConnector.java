@@ -159,8 +159,6 @@ public class FloodlightSDNConnector implements ISDNConnector {
 				hopRefCount.remove(h);
 			}
 
-			entry.put("node", h.getNode().getId().replaceAll("\\.", ":"));
-
 			for (FLCircuitProto p : FLCircuitProto.values()) {
 				String entryID = circuitID + "." + p.toString() + "."
 						+ h.getNode().getId();
@@ -219,9 +217,10 @@ public class FloodlightSDNConnector implements ISDNConnector {
 	    		+ "\"actions\":\"output={dstPort}\""
 	    		+ "}";
 		
+		String switchDPID = node.getId().replaceAll("\\.", ":");
 		try {
 	 		String request = baseJSONRequest
-						.replaceAll("\\{switch\\}", node.getId())
+						.replaceAll("\\{switch\\}", switchDPID)
 						.replaceAll("\\{name\\}",   (String) entryParams.get("id"))
 						.replaceAll("\\{ethtype\\}",(String) entryParams.get("proto"))
 						.replaceAll("\\{srcPort\\}",(String) entryParams.get("src"))
@@ -260,10 +259,11 @@ public class FloodlightSDNConnector implements ISDNConnector {
     			+ "\"name\":\"{name}\","
     			+ "\"switch\":\"{switch}\""
     			+ "}";
-    	
+
+    	String switchDPID = node.getId().replaceAll("\\.", ":");
     	try {
 	 		String request = baseJSONRequest
-	 					.replaceAll("\\{switch\\}", node.getId())
+	 					.replaceAll("\\{switch\\}", switchDPID)
 						.replaceAll("\\{name\\}",   (String) entryParams.get("id"));
 	 		delete(request);
     	}
@@ -276,21 +276,24 @@ public class FloodlightSDNConnector implements ISDNConnector {
 	// @formatter:on
 
 	private void store(String request) throws IOException {
+		log.debug("Storing entry: " + request);
 		try {
 			ClientResource cr = new ClientResource(controller
 					+ "/wm/staticflowentrypusher/json/store");
 			cr.post(request);
+			// TODO: parse result
 		} catch (Exception e) {
 			throw new IOException(e.getMessage());
 		}
 	}
 
 	private void delete(String request) throws IOException {
-		ClientResource cr = new ClientResource(controller
-				+ "/wm/staticflowentrypusher/json/delete");
-
+		log.debug("Deleting entry: " + request);
 		try {
+			ClientResource cr = new ClientResource(controller
+					+ "/wm/staticflowentrypusher/json/delete");
 			cr.post(request);
+			// TODO: parse result
 		} catch (Exception e) {
 			throw new IOException(e.getMessage());
 		}
