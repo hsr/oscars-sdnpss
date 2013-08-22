@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 
+import net.es.oscars.pss.sdn.connector.ISDNConnector.ISDNConnectorResponse;
+import net.es.oscars.topoBridge.sdn.SDNHop;
 import net.es.oscars.topoBridge.sdn.SDNLink;
 import net.es.oscars.topoBridge.sdn.SDNNode;
 
@@ -61,20 +63,22 @@ public interface ISDNConnector {
      * SDN Connector specific implementation of a circuit setup action with the given 
      * list of hops.
      * 
-     * @param links a list of SDNLinks (List<SDNLink>) that describes each hop in the circuit
+     * @param hops a list of SDNHops (List<SDNHop>) that describes each hop in the circuit
      * @throws IOException
      */
-	public ISDNConnectorResponse setupCircuit(List<SDNLink> links,
+	public ISDNConnectorResponse setupCircuit(List<SDNHop> hops,
 			String circuitID) throws IOException;
     
     /**
      * SDN Connector implementation of a circuit teardown action with the given 
      * list of hops.
      * 
-     * @param links a list of SDNLinks (List<SDNLink>) that describes each hop in the circuit
+     * @param hops a list of SDNHops (List<SDNHops>) that describes each hop in the circuit
      * @throws IOException
      */	
-	public ISDNConnectorResponse teardownCircuit(List<SDNLink> links,
+	public ISDNConnectorResponse teardownCircuit(List<SDNHop> hops,
 			String circuitID) throws IOException;
+
+
 
 }

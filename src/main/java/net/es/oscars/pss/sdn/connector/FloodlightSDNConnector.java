@@ -11,7 +11,7 @@ import org.apache.log4j.Logger;
 import org.restlet.resource.ClientResource;
 
 import net.es.oscars.topoBridge.sdn.SDNCapability;
-import net.es.oscars.topoBridge.sdn.SDNLink;
+import net.es.oscars.topoBridge.sdn.SDNHop;
 import net.es.oscars.topoBridge.sdn.SDNNode;
 import net.es.oscars.topoBridge.sdn.SDNObject;
 
@@ -24,7 +24,7 @@ import net.es.oscars.topoBridge.sdn.SDNObject;
  */
 public class FloodlightSDNConnector implements ISDNConnector {
 	private String controller = null;
-	private static Map<SDNLink, Integer> linkRefCount = null;
+	private static Map<SDNHop, Integer> hopRefCount = null;
 	private static final Logger log = Logger
 			.getLogger(FloodlightSDNConnector.class.getName());
 
@@ -44,7 +44,7 @@ public class FloodlightSDNConnector implements ISDNConnector {
 
 	public FloodlightSDNConnector() {
 		controller = null;
-		linkRefCount = new HashMap<SDNLink, Integer>();
+		hopRefCount = new HashMap<SDNHop, Integer>();
 	}
 
 	public FloodlightSDNConnector(String address) {
@@ -87,36 +87,36 @@ public class FloodlightSDNConnector implements ISDNConnector {
 	}
 
 	@Override
-	public ISDNConnectorResponse setupCircuit(List<SDNLink> links,
+	public ISDNConnectorResponse setupCircuit(List<SDNHop> hops,
 			String circuitID) throws IOException {
 		if (controller == null) {
 			return ISDNConnectorResponse.CONTROLLER_NOT_SET;
 		}
 
 		// Get hop setup order.
-		Collections.sort(links, new LinkSetupOrder());
+		Collections.sort(hops, new LinkSetupOrder());
 
 		ISDNConnectorResponse response;
 
-		for (SDNLink l : links) {
-			if (linkRefCount.containsKey(l)) {
-				linkRefCount.put(l, new Integer(linkRefCount.get(l) + 1));
+		for (SDNHop h : hops) {
+			if (hopRefCount.containsKey(h)) {
+				hopRefCount.put(h, new Integer(hopRefCount.get(h) + 1));
 				continue;
 			}
-			linkRefCount.put(l, new Integer(1));
+			hopRefCount.put(h, new Integer(1));
 
 			HashMap<String, Object> forwardEntry = new HashMap<String, Object>(),
 									reverseEntry = new HashMap<String, Object>();
 
-			forwardEntry.put("src", l.getSrcPort());
-			forwardEntry.put("dst", l.getDstPort());
+			forwardEntry.put("src", h.getSrcPort());
+			forwardEntry.put("dst", h.getDstPort());
 
-			reverseEntry.put("src", l.getDstPort());
-			reverseEntry.put("dst", l.getSrcPort());
+			reverseEntry.put("src", h.getDstPort());
+			reverseEntry.put("dst", h.getSrcPort());
 
 			for (FLCircuitProto p : FLCircuitProto.values()) {
 				String entryID = circuitID + "." + p.toString() + "."
-						+ l.getNode().getId();
+						+ h.getNode().getId();
 
 				forwardEntry.put("id", entryID + ".F");
 				forwardEntry.put("proto", p.value);
@@ -124,11 +124,11 @@ public class FloodlightSDNConnector implements ISDNConnector {
 				reverseEntry.put("id", entryID + ".R");
 				reverseEntry.put("proto", p.value);
 
-				response = installEntry(l.getNode(), forwardEntry);
+				response = installEntry(h.getNode(), forwardEntry);
 				if (response != ISDNConnectorResponse.SUCCESS)
 					return ISDNConnectorResponse.FAILURE;
 
-				response = installEntry(l.getNode(), reverseEntry);
+				response = installEntry(h.getNode(), reverseEntry);
 				if (response != ISDNConnectorResponse.SUCCESS)
 					return ISDNConnectorResponse.FAILURE;
 			}
@@ -138,7 +138,7 @@ public class FloodlightSDNConnector implements ISDNConnector {
 	}
 
 	@Override
-	public ISDNConnectorResponse teardownCircuit(List<SDNLink> links,
+	public ISDNConnectorResponse teardownCircuit(List<SDNHop> hops,
 			String circuitID) throws IOException {
 		if (controller == null) {
 			return ISDNConnectorResponse.CONTROLLER_NOT_SET;
@@ -146,32 +146,32 @@ public class FloodlightSDNConnector implements ISDNConnector {
 
 		ISDNConnectorResponse response;
 
-		for (SDNLink l : links) {
+		for (SDNHop h : hops) {
 			HashMap<String, Object> entry = new HashMap<String, Object>();
 
-			if (!linkRefCount.containsKey(l)) {
+			if (!hopRefCount.containsKey(h)) {
 				log.warn("FloodlightSDNConnector: where this link came from?");
-			} else if (linkRefCount.get(l) > 1) {
+			} else if (hopRefCount.get(h) > 1) {
 
-				linkRefCount.put(l, new Integer(linkRefCount.get(l) - 1));
+				hopRefCount.put(h, new Integer(hopRefCount.get(h) - 1));
 				continue;
 			} else {
-				linkRefCount.remove(l);
+				hopRefCount.remove(h);
 			}
 
-			entry.put("node", l.getSrcNode().replaceAll("\\.", ":"));
+			entry.put("node", h.getNode().getId().replaceAll("\\.", ":"));
 
 			for (FLCircuitProto p : FLCircuitProto.values()) {
 				String entryID = circuitID + "." + p.toString() + "."
-						+ l.getNode().getId();
+						+ h.getNode().getId();
 
 				entry.put("id", entryID + ".F");
-				response = deleteEntry(l.getNode(), entry);
+				response = deleteEntry(h.getNode(), entry);
 				if (response != ISDNConnectorResponse.SUCCESS)
 					return ISDNConnectorResponse.FAILURE;
 
 				entry.put("id", entryID + ".R");
-				response = deleteEntry(l.getNode(), entry);
+				response = deleteEntry(h.getNode(), entry);
 				if (response != ISDNConnectorResponse.SUCCESS)
 					return ISDNConnectorResponse.FAILURE;
 			}

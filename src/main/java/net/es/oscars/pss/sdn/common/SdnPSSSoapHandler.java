@@ -22,7 +22,7 @@ import net.es.oscars.pss.soap.gen.SetupReqContent;
 import net.es.oscars.pss.soap.gen.StatusReqContent;
 import net.es.oscars.pss.soap.gen.TeardownReqContent;
 import net.es.oscars.topoBridge.sdn.BaseSDNTopologyService;
-import net.es.oscars.topoBridge.sdn.SDNLink;
+import net.es.oscars.topoBridge.sdn.SDNHop;
 import net.es.oscars.utils.sharedConstants.ErrorCodes;
 import net.es.oscars.utils.soap.ErrorReport;
 import net.es.oscars.utils.svc.ServiceNames;
@@ -50,12 +50,12 @@ public class SdnPSSSoapHandler implements PSSPortType {
 		netLogger.init(moduleName, setupReq.getTransactionId());
 		String gri = setupReq.getReservation().getGlobalReservationId();
 		netLogger.setGRI(gri);
-		List<SDNLink> sdnLinks = null;
+		List<SDNHop> hops = null;
 
 		log.info(netLogger.start(event));
 
 		try {
-			sdnLinks = BaseSDNTopologyService.extractSDNLinks(setupReq.getReservation()
+			hops = BaseSDNTopologyService.extractSDNHops(setupReq.getReservation()
 					.getReservedConstraint().getPathInfo().getPath().getHop());
 		} catch (Exception e) {
 			log.info("Couldn't get path: " + e.getMessage());
@@ -71,8 +71,8 @@ public class SdnPSSSoapHandler implements PSSPortType {
 				sdnConnector.setConnectionAddress(circuitServiceParams
 						.get("controller"));
 				
-				if ((sdnLinks != null) && (sdnLinks.size() > 0) && 
-						(sdnConnector.setupCircuit(sdnLinks, gri) == 
+				if ((hops != null) && (hops.size() > 0) && 
+						(sdnConnector.setupCircuit(hops, gri) == 
 						ISDNConnectorResponse.SUCCESS)) {
 					
 					notifyCoordinator(setupReq.getTransactionId(), 
@@ -99,12 +99,12 @@ public class SdnPSSSoapHandler implements PSSPortType {
 		netLogger.init(moduleName, teardownReq.getTransactionId());
 		String gri = teardownReq.getReservation().getGlobalReservationId();
 		netLogger.setGRI(gri);
-		List<SDNLink> sdnLinks = null;
+		List<SDNHop> hops = null;
 
         log.info(netLogger.start("teardown"));
 
 		try {
-			sdnLinks = BaseSDNTopologyService.extractSDNLinks(teardownReq.getReservation()
+			hops = BaseSDNTopologyService.extractSDNHops(teardownReq.getReservation()
 					.getReservedConstraint().getPathInfo().getPath().getHop());
 		} catch (Exception e) {
 			log.info("Couldn't get path: " + e.getMessage());
@@ -120,8 +120,8 @@ public class SdnPSSSoapHandler implements PSSPortType {
 				sdnConnector.setConnectionAddress(circuitServiceParams
 						.get("controller"));
 				
-				if ((sdnLinks != null) && (sdnLinks.size() > 0) && (
-					sdnConnector.teardownCircuit(sdnLinks, gri) ==
+				if ((hops != null) && (hops.size() > 0) && (
+					sdnConnector.teardownCircuit(hops, gri) ==
 						ISDNConnectorResponse.SUCCESS)) {
 					
 						notifyCoordinator(teardownReq.getTransactionId(), 
