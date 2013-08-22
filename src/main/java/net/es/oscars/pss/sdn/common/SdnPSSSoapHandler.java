@@ -61,8 +61,6 @@ public class SdnPSSSoapHandler implements PSSPortType {
 			log.info("Couldn't get path: " + e.getMessage());
 		}
 
-		//sdnConnector.setConnectionAddress("http://student6.es.net:8080");
-
 		CircuitServiceConfig circuitServiceConfig = ConfigHolder.getInstance()
 				.getBaseConfig().getCircuitService();
 		Map<String, String> circuitServiceParams = circuitServiceConfig

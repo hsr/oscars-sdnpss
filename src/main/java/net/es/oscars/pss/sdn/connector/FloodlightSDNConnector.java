@@ -1,6 +1,8 @@
 package net.es.oscars.pss.sdn.connector;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,8 +10,10 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 import org.restlet.resource.ClientResource;
 
+import net.es.oscars.topoBridge.sdn.SDNCapability;
 import net.es.oscars.topoBridge.sdn.SDNLink;
 import net.es.oscars.topoBridge.sdn.SDNNode;
+import net.es.oscars.topoBridge.sdn.SDNObject;
 
 /**
  * Implements the Floodlight SDN connector: the interface that OSCARS use to
@@ -54,12 +58,43 @@ public class FloodlightSDNConnector implements ISDNConnector {
 		return ISDNConnectorResponse.SUCCESS;
 	}
 
+	/**
+	 * Compares two SDNObjects by capabilities. This is used to define the order
+	 * in which cross connects will be created. Links with lower capabilities
+	 * will be configured first. For example, if a reservation has Optical
+	 * Devices that can forward using L1 only and L2 switches that can forward
+	 * based on MAC addresses, the Optical hops will have higher priority over
+	 * L2 switches. The total order, by priority, assumed is: 
+	 * 
+	 * L1 > MPLS > VLAN > L2 > L3
+	 */
+	public final class LinkSetupOrder implements Comparator<SDNObject> {
+		@Override
+		public int compare(SDNObject link1, SDNObject link2) {
+			SDNCapability[] priority = { SDNCapability.L1, SDNCapability.MPLS,
+					SDNCapability.VLAN, SDNCapability.L2, SDNCapability.L3 };
+			
+			int link1MaxCap = 0, link2MaxCap = 0, i = 0;
+			for (SDNCapability c : priority) {
+				if (link1.hasCapability(c))
+					link1MaxCap = i;
+				if (link2.hasCapability(c))
+					link2MaxCap = i;
+				i++;
+			}
+			return link1MaxCap - link2MaxCap;
+		}
+	}
+
 	@Override
 	public ISDNConnectorResponse setupCircuit(List<SDNLink> links,
 			String circuitID) throws IOException {
 		if (controller == null) {
 			return ISDNConnectorResponse.CONTROLLER_NOT_SET;
 		}
+
+		// Get hop setup order.
+		Collections.sort(links, new LinkSetupOrder());
 
 		ISDNConnectorResponse response;
 
