@@ -66,13 +66,18 @@ public class SdnPSSSoapHandler implements PSSPortType {
 		Map<String, String> circuitServiceParams = circuitServiceConfig
 				.getParams();
 		
+		// TODO: here we use the description field of the reservation
+		// to specify a OFMatch. The correct way to do it is to add a field 
+		// in the WBUI to specify the OFMatch instead of reading it from the description.
+		String description = setupReq.getReservation().getDescription();
+		
 		try {
 			if (circuitServiceParams.containsKey("controller")) {
 				sdnConnector.setConnectionAddress(circuitServiceParams
 						.get("controller"));
 				
 				if ((hops != null) && (hops.size() > 0) && 
-						(sdnConnector.setupCircuit(hops, gri) == 
+						(sdnConnector.setupCircuit(hops, gri, description) == 
 						ISDNConnectorResponse.SUCCESS)) {
 					
 					notifyCoordinator(setupReq.getTransactionId(), 

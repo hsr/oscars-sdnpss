@@ -70,6 +70,17 @@ public interface ISDNConnector {
 			String circuitID) throws IOException;
     
     /**
+	 * SDN Connector specific implementation of a circuit setup action with the given 
+	 * list of hops and a string with an OpenFlow match.
+	 * 
+	 * @param hops a list of SDNHops (List<SDNHop>) that describes each hop in the circuit
+	 * @param match OpenFlow match string
+	 * @throws IOException
+	 */
+	public ISDNConnectorResponse setupCircuit(List<SDNHop> hops,
+			String circuitID, String match) throws IOException;
+
+	/**
      * SDN Connector implementation of a circuit teardown action with the given 
      * list of hops.
      * 
