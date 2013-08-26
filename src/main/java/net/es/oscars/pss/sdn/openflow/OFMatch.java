@@ -78,8 +78,15 @@ public abstract class OFMatch {
 			throw new Exception(String.format("Invalid match %s", match));
 		}
 		
-		if (matchMap.size() > 0)
+		if (matchMap.size() > 0) {
+			if (matchMap.containsKey("dst-port") || matchMap.containsKey("src-port")) {
+				if (!matchMap.containsKey("protocol"))
+					matchMap.put("protocol", "6"); // if no L4 specified, assume TCP
+				if (!matchMap.containsKey("ether-type"))
+					matchMap.put("ether-type", "0x800"); // if no L3 specified, assume IP
+			}
 			return matchMap;
+		}
 		return null;
 	}
 }
