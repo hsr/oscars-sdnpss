@@ -79,7 +79,9 @@ public abstract class OFMatch {
 		}
 		
 		if (matchMap.size() > 0) {
-			if (matchMap.containsKey("dst-port") || matchMap.containsKey("src-port")) {
+			if (matchMap.containsKey("dst-port") 
+					|| matchMap.containsKey("src-port") 
+					|| matchMap.containsKey("protocol")) {
 				if (!matchMap.containsKey("protocol"))
 					matchMap.put("protocol", "6"); // if no L4 specified, assume TCP
 				if (!matchMap.containsKey("ether-type"))
