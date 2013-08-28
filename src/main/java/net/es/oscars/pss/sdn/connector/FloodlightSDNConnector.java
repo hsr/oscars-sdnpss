@@ -14,7 +14,7 @@ import net.es.oscars.topoBridge.sdn.SDNCapability;
 import net.es.oscars.topoBridge.sdn.SDNHop;
 import net.es.oscars.topoBridge.sdn.SDNNode;
 import net.es.oscars.topoBridge.sdn.SDNObject;
-import net.es.oscars.pss.sdn.openflow.OFMatch;
+import net.es.oscars.pss.sdn.openflow.OFRule;
 
 /**
  * Implements the Floodlight SDN connector: the interface that OSCARS use to
@@ -299,7 +299,7 @@ public class FloodlightSDNConnector implements ISDNConnector {
 		Map<String, String> floodlightMatch = null;
 		if (ofMatch != null) {
 			try {
-				floodlightMatch = OFMatch.parseOFMatch(ofMatch);
+				floodlightMatch = OFRule.translateOFRule(ofMatch);
 			} catch (Exception e) {
 				log.warn("Invalid match: " + e.getMessage());
 			}
