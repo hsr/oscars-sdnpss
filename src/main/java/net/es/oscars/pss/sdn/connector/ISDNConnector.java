@@ -3,13 +3,10 @@
  */
 package net.es.oscars.pss.sdn.connector;
 
-import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
 
-import net.es.oscars.pss.sdn.connector.ISDNConnector.ISDNConnectorResponse;
+import net.es.oscars.pss.sdn.openflow.OFRule;
 import net.es.oscars.topoBridge.sdn.SDNHop;
-import net.es.oscars.topoBridge.sdn.SDNLink;
 import net.es.oscars.topoBridge.sdn.SDNNode;
 
 /**
@@ -32,31 +29,31 @@ public interface ISDNConnector {
      * connector should connect to
      * 
      * @param address
-     * @throws IOException
+     * @throws Exception
      */
     public ISDNConnectorResponse setConnectionAddress(String address);
 	
     /**
      * Request the SDN controller to install an entry on a switch
      * @param sdnNode a SDNNode object representing the switch or network device
-     * @param entryParams
+     * @param rule
      * 		Contains sets of key,value pairs describing the entry.
      * 		Implementors should parse its values and build their implementation specific entry. 
-     * @throws IOException
+     * @throws Exception
      */
     public ISDNConnectorResponse installEntry(SDNNode sdnNode, 
-    		HashMap<String,Object> entryParams) throws IOException;
+    		OFRule rule) throws Exception;
     
     /**
      * Request the SDN controller to delete an entry from a switch or network device
      * @param sdnNode a SDNNode object representing the switch or network device
-     * @param entryParams
+     * @param rule
      * 		Contains sets of key,value pairs describing the entry.
      * 		Implementors should parse its values and build their implementation specific entry. 
-     * @throws IOException
+     * @throws Exception
      */
     public ISDNConnectorResponse deleteEntry(SDNNode sdnNode,
-    		HashMap<String,Object> entryParams) throws IOException;
+    		OFRule rule) throws Exception;
     
 
     /**
@@ -64,31 +61,35 @@ public interface ISDNConnector {
      * list of hops.
      * 
      * @param hops a list of SDNHops (List<SDNHop>) that describes each hop in the circuit
-     * @throws IOException
+     * @throws Exception 
      */
 	public ISDNConnectorResponse setupCircuit(List<SDNHop> hops,
-			String circuitID) throws IOException;
+			String circuitID) throws Exception;
     
     /**
 	 * SDN Connector specific implementation of a circuit setup action with the given 
-	 * list of hops and a string with an OpenFlow match.
+	 * list of hops and a string with an OpenFlow rule that specify OFMatch and 
+	 * OFActions for this circuit.
 	 * 
 	 * @param hops a list of SDNHops (List<SDNHop>) that describes each hop in the circuit
-	 * @param match OpenFlow match string
-	 * @throws IOException
+	 * @param rule OpenFlow rule 
+     * @throws Exception 
 	 */
 	public ISDNConnectorResponse setupCircuit(List<SDNHop> hops,
-			String circuitID, String match) throws IOException;
+			String circuitID, OFRule rule) throws Exception;
 
 	/**
      * SDN Connector implementation of a circuit teardown action with the given 
      * list of hops.
      * 
      * @param hops a list of SDNHops (List<SDNHops>) that describes each hop in the circuit
-     * @throws IOException
+     * @throws Exception
      */	
 	public ISDNConnectorResponse teardownCircuit(List<SDNHop> hops,
-			String circuitID) throws IOException;
+			String circuitID) throws Exception;
+
+
+
 
 
 

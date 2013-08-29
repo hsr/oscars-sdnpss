@@ -3,6 +3,8 @@ package net.es.oscars.pss.sdn.common;
 import java.util.List;
 import java.util.Map;
 
+import net.es.oscars.api.soap.gen.v06.PathInfo;
+import net.es.oscars.api.soap.gen.v06.VlanTag;
 import net.es.oscars.common.soap.gen.OSCARSFaultReport;
 import net.es.oscars.logging.ModuleName;
 import net.es.oscars.logging.OSCARSNetLogger;
@@ -16,6 +18,7 @@ import net.es.oscars.pss.enums.ActionType;
 import net.es.oscars.pss.notify.CoordNotifier;
 import net.es.oscars.pss.sdn.connector.FloodlightSDNConnector;
 import net.es.oscars.pss.sdn.connector.ISDNConnector.ISDNConnectorResponse;
+import net.es.oscars.pss.sdn.openflow.OFRule;
 import net.es.oscars.pss.soap.gen.ModifyReqContent;
 import net.es.oscars.pss.soap.gen.PSSPortType;
 import net.es.oscars.pss.soap.gen.SetupReqContent;
@@ -51,12 +54,13 @@ public class SdnPSSSoapHandler implements PSSPortType {
 		String gri = setupReq.getReservation().getGlobalReservationId();
 		netLogger.setGRI(gri);
 		List<SDNHop> hops = null;
+		PathInfo pi = setupReq.getReservation()
+				.getReservedConstraint().getPathInfo();
 
 		log.info(netLogger.start(event));
 
 		try {
-			hops = BaseSDNTopologyService.extractSDNHops(setupReq.getReservation()
-					.getReservedConstraint().getPathInfo().getPath().getHop());
+			hops = BaseSDNTopologyService.extractSDNHops(pi.getPath().getHop());
 		} catch (Exception e) {
 			log.info("Couldn't get path: " + e.getMessage());
 		}
@@ -70,6 +74,19 @@ public class SdnPSSSoapHandler implements PSSPortType {
 		// to specify a OFMatch. The correct way to do it is to add a field 
 		// in the WBUI to specify the OFMatch instead of reading it from the description.
 		String description = setupReq.getReservation().getDescription();
+
+		OFRule rule;
+		try {
+			rule = new OFRule(description);
+		} catch (Exception e) {
+			log.debug("Provided rule isn't valid");
+			rule = new OFRule();
+		}
+		
+		VlanTag srcVlan = pi.getLayer2Info().getSrcVtag();
+		VlanTag dstVlan = pi.getLayer2Info().getDestVtag();
+		rule.putVlan(srcVlan.isTagged(), srcVlan.getValue(), 
+					 dstVlan.isTagged(), dstVlan.getValue());
 		
 		try {
 			if (circuitServiceParams.containsKey("controller")) {
@@ -77,7 +94,7 @@ public class SdnPSSSoapHandler implements PSSPortType {
 						.get("controller"));
 				
 				if ((hops != null) && (hops.size() > 0) && 
-						(sdnConnector.setupCircuit(hops, gri, description) == 
+						(sdnConnector.setupCircuit(hops, gri, rule) == 
 						ISDNConnectorResponse.SUCCESS)) {
 					
 					notifyCoordinator(setupReq.getTransactionId(), 
@@ -86,11 +103,11 @@ public class SdnPSSSoapHandler implements PSSPortType {
 			        log.info(netLogger.end(event));
 					return;
 				}
-
 			}
 		}
 		catch (Exception e) {
 			log.error("Couldn't setup circuit: " + e.getMessage());
+			e.printStackTrace();
 		}
 		
 		notifyCoordinator(setupReq.getTransactionId(), 
@@ -139,6 +156,7 @@ public class SdnPSSSoapHandler implements PSSPortType {
 		}
 		catch (Exception e) {
 			log.error("Couldn't teardown circuit: " + e.getMessage());
+			e.printStackTrace();
 		}
 		
 		notifyCoordinator(teardownReq.getTransactionId(), 

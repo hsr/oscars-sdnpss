@@ -7,14 +7,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
-import org.restlet.resource.ClientResource;
-
+import net.es.oscars.pss.sdn.openflow.OFRule;
 import net.es.oscars.topoBridge.sdn.SDNCapability;
 import net.es.oscars.topoBridge.sdn.SDNHop;
 import net.es.oscars.topoBridge.sdn.SDNNode;
 import net.es.oscars.topoBridge.sdn.SDNObject;
-import net.es.oscars.pss.sdn.openflow.OFRule;
+
+import org.apache.log4j.Logger;
+import org.restlet.resource.ClientResource;
 
 /**
  * Implements the Floodlight SDN connector: the interface that OSCARS use to
@@ -59,10 +59,11 @@ public class FloodlightSDNConnector implements ISDNConnector {
 		return ISDNConnectorResponse.SUCCESS;
 	}
 
-	private ISDNConnectorResponse setupL1Hop(SDNHop h, String circuitID) throws IOException {
+	private ISDNConnectorResponse setupL1Hop(SDNHop h, String circuitID) throws Exception {
 
-		HashMap<String, Object> forwardEntry = new HashMap<String, Object>(),
-								reverseEntry = new HashMap<String, Object>();
+		log.debug("start setupL1Hop");
+		OFRule forwardEntry = new OFRule(),
+			   reverseEntry = new OFRule();
 
 		forwardEntry.put("ingress-port", h.getSrcPort());
 		forwardEntry.put("output", h.getDstPort());
@@ -72,10 +73,8 @@ public class FloodlightSDNConnector implements ISDNConnector {
 
 		ISDNConnectorResponse response;
 
-		
 		String entryID = h.hashCode() + "." + h.getNode().getId();
 		
-
 		forwardEntry.put("name", entryID + ".F");
 		response = installEntry(h.getNode(), forwardEntry);
 		if (response != ISDNConnectorResponse.SUCCESS)
@@ -86,11 +85,12 @@ public class FloodlightSDNConnector implements ISDNConnector {
 		if (response != ISDNConnectorResponse.SUCCESS)
 			return response;
 		
+		log.debug("end setupL1Hop");
 		return ISDNConnectorResponse.SUCCESS;
 	}
 
-	private ISDNConnectorResponse teardownL1Hop(SDNHop h, String circuitID) throws IOException {
-		HashMap<String, Object> entry = new HashMap<String, Object>();
+	private ISDNConnectorResponse teardownL1Hop(SDNHop h, String circuitID) throws Exception {
+		OFRule entry = new OFRule();
 		ISDNConnectorResponse response;
 	
 		String entryID = h.hashCode() + "." + h.getNode().getId(); 
@@ -108,40 +108,32 @@ public class FloodlightSDNConnector implements ISDNConnector {
 	}
 
 	private ISDNConnectorResponse setupL2Hop(SDNHop h,
-			String circuitID, Map<String, String> floodlightMatch) throws IOException {
-		
-		HashMap<String, Object> forwardEntry = new HashMap<String, Object>(),
-								reverseEntry = new HashMap<String, Object>();
-		
+			String circuitID, OFRule rule) throws Exception {
+		log.debug("start setupL2Hop");
+
+		OFRule forwardEntry = new OFRule(rule),
+			   reverseEntry = rule.reverse();
+
 		ISDNConnectorResponse response;
 		
 		String entryID = circuitID + ".match." + h.hashCode();
 
 		if (!h.isEntryHop()) { // on entry hops, the match decides 
 							   // what goes into the circuit
-			forwardEntry.put("ingress-port", h.getSrcPort());
+			forwardEntry.put("in_port", h.getSrcPort());
 		}
 		
 		forwardEntry.put("output", h.getDstPort());
 		forwardEntry.put("name", entryID + ".F");
 		
 		if (!h.isExitHop()) {
-			reverseEntry.put("ingress-port", h.getDstPort());
+			reverseEntry.put("in_port", h.getDstPort());
 		}
 		reverseEntry.put("output", h.getSrcPort());
 		reverseEntry.put("name", entryID + ".R");
 		
-		if (floodlightMatch != null) {
-			for (Map.Entry<String,String> match : floodlightMatch.entrySet()) {
-				  String key = match.getKey();
-				  String value = match.getValue();
-				  if (key != "ingress-port") {
-					  forwardEntry.put(key, value);
-					  reverseEntry.put(key, value);
-				  }
-			}
-		}
-		else if (h.isEntryHop() || h.isExitHop()) {
+		if ((h.isEntryHop() || h.isExitHop())
+			&& rule.matchSize() < 1) {
 			// if no match was specified, and this is an Entry or 
 			// Exit hop, then we have nothing to do here. Let the
 			// end (entry and exit) switches decided what is going 
@@ -161,12 +153,12 @@ public class FloodlightSDNConnector implements ISDNConnector {
 			if (response != ISDNConnectorResponse.SUCCESS)
 				return response;
 		}
-		
+		log.debug("end setupL2Hop");
 		return ISDNConnectorResponse.SUCCESS;
 	}
 	
-	private ISDNConnectorResponse teardownL2Hop(SDNHop h, String circuitID) throws IOException {
-		HashMap<String, Object> entry = new HashMap<String, Object>();
+	private ISDNConnectorResponse teardownL2Hop(SDNHop h, String circuitID) throws Exception {
+		OFRule entry = new OFRule();
 		ISDNConnectorResponse response;
 	
 		String entryID = circuitID + ".match." + h.hashCode();
@@ -184,43 +176,32 @@ public class FloodlightSDNConnector implements ISDNConnector {
 	}
 
 	protected ISDNConnectorResponse setupL2Bypass(SDNHop h,
-			String circuitID, Map<String, String> floodlightMatch) throws IOException {
+			String circuitID, OFRule rule) throws Exception {
 		
 		if (h.isEntryHop() || h.isExitHop()) {
-			throw new IOException("Can't bypass an Entry/Exit hop");
+			throw new Exception("Can't bypass an Entry/Exit hop");
 		}
 		
-		HashMap<String, Object> forwardEntry = new HashMap<String, Object>(),
-								reverseEntry = new HashMap<String, Object>();
+		OFRule forwardEntry = new OFRule(rule),
+			   reverseEntry = rule.reverse();
 		
 		ISDNConnectorResponse response;
 		
 
-		forwardEntry.put("ingress-port", h.getSrcPort());
+		forwardEntry.put("in_port", h.getSrcPort());
 		forwardEntry.put("output", h.getDstPort());
 		
-		reverseEntry.put("ingress-port", h.getDstPort());
+		reverseEntry.put("in_port", h.getDstPort());
 		reverseEntry.put("output", h.getSrcPort());
 		
-		if (floodlightMatch != null) {
-			for (Map.Entry<String,String> match : floodlightMatch.entrySet()) {
-				  String key = match.getKey();
-				  String value = match.getValue();
-				  if (key != "ingress-port") {
-					  forwardEntry.put(key, value);
-					  reverseEntry.put(key, value);
-				  }
-			}
-		}
-
 		for (FLCircuitProto p : FLCircuitProto.values()) {
 			String entryID = circuitID + "." + p.toString() +  h.hashCode();
 
 			forwardEntry.put("name", entryID + ".F");
-			forwardEntry.put("ether-type", p.value);
+			forwardEntry.put("dl_type", p.value);
 
 			reverseEntry.put("name", entryID + ".R");
-			reverseEntry.put("ether-type", p.value);
+			reverseEntry.put("dl_type", p.value);
 
 			response = installEntry(h.getNode(), forwardEntry);
 			if (response != ISDNConnectorResponse.SUCCESS)
@@ -234,8 +215,8 @@ public class FloodlightSDNConnector implements ISDNConnector {
 		return ISDNConnectorResponse.SUCCESS;
 	}
 
-	protected ISDNConnectorResponse teardownL2Bypass(SDNHop h, String circuitID) throws IOException {
-		HashMap<String, Object> entry = new HashMap<String, Object>();
+	protected ISDNConnectorResponse teardownL2Bypass(SDNHop h, String circuitID) throws Exception {
+		OFRule entry = new OFRule();
 		ISDNConnectorResponse response;
 	
 		for (FLCircuitProto p : FLCircuitProto.values()) {
@@ -285,24 +266,15 @@ public class FloodlightSDNConnector implements ISDNConnector {
 
 	@Override
 	public ISDNConnectorResponse setupCircuit(List<SDNHop> hops,
-			String circuitID) throws IOException {
+			String circuitID) throws Exception {
 		return setupCircuit(hops, circuitID, null);
 	}
 
 	@Override
 	public ISDNConnectorResponse setupCircuit(List<SDNHop> hops,
-			String circuitID, String ofMatch) throws IOException {
+			String circuitID, OFRule rule) throws Exception {
 		if (controller == null) {
 			return ISDNConnectorResponse.CONTROLLER_NOT_SET;
-		}
-
-		Map<String, String> floodlightMatch = null;
-		if (ofMatch != null) {
-			try {
-				floodlightMatch = OFRule.translateOFRule(ofMatch);
-			} catch (Exception e) {
-				log.warn("Invalid match: " + e.getMessage());
-			}
 		}
 
 		// Get hop setup order.
@@ -313,18 +285,21 @@ public class FloodlightSDNConnector implements ISDNConnector {
 		for (SDNHop h : hops) {
 			if (h.getNode().getId().matches("^11.*")) {
 				if (hopRefCount.containsKey(h)) {
-					log.debug(String.format("Increasing hopRefcount for %s to %d", 
+					log.debug(String.format(
+							"Increasing hopRefcount for %s to %d", 
 							h, hopRefCount.get(h) + 1));
-					hopRefCount.put(h, new Integer(hopRefCount.get(h) + 1));
+					hopRefCount.put(h, 
+							new Integer(hopRefCount.get(h) + 1));
 					continue;
 				}
-				log.debug(String.format("Setting hopRefcount for %s to %d", h, 1));
+				log.debug(String.format(
+						"Setting hopRefcount for %s to %d", h, 1));
 				hopRefCount.put(h, new Integer(1));
 			}
 
 			// Check for capabilities
-			if (h.getCapabilities().contains(SDNCapability.L2)) {
-				response = setupL2Hop(h, circuitID, floodlightMatch);
+			if (h.getCapabilities().contains(SDNCapability.L2) && rule != null) {
+				response = setupL2Hop(h, circuitID, rule);
 				if (response != ISDNConnectorResponse.SUCCESS)
 					return response;
 			}
@@ -340,7 +315,7 @@ public class FloodlightSDNConnector implements ISDNConnector {
 
 	@Override
 	public ISDNConnectorResponse teardownCircuit(List<SDNHop> hops,
-			String circuitID) throws IOException {
+			String circuitID) throws Exception {
 
 		if (controller == null) {
 			return ISDNConnectorResponse.CONTROLLER_NOT_SET;
@@ -393,16 +368,16 @@ public class FloodlightSDNConnector implements ISDNConnector {
 	 * 
 	 * @param node
 	 *            the SDNNode that will receive the new entry
-	 * @param entryParams
+	 * @param rule
 	 *            Contains sets of key,value pairs describing the entry.
 	 */
 	@Override
 	public ISDNConnectorResponse installEntry(SDNNode node,
-			HashMap<String, Object> entryParams) throws IOException {
+			OFRule rule) throws Exception {
 		if (controller == null) {
 			return ISDNConnectorResponse.CONTROLLER_NOT_SET;
 		}
-		if (!entryParams.containsKey("name")) {
+		if (!rule.containsKey("name")) {
 			return ISDNConnectorResponse.FAILURE;
 		}
 
@@ -410,15 +385,10 @@ public class FloodlightSDNConnector implements ISDNConnector {
 			String switchDPID = node.getId().replaceAll("\\.", ":");
 			String jsonRequest = String.format("{\"switch\":\"%s\"", switchDPID);
 			
-			for (Map.Entry<String,Object> entry : entryParams.entrySet()) {
+			for (Map.Entry<String,String> entry : rule.floodlightEntrySet()) {
 				  String key = entry.getKey();
-				  String value = (String) entry.getValue();
-				  if (key == "output") {
-					  jsonRequest += String.format(",\"actions\":\"output=%s\"", value);
-				  }
-				  else {
-					  jsonRequest += String.format(",\"%s\":\"%s\"", key, value);
-				  }
+				  String value = entry.getValue();
+				  jsonRequest += String.format(",\"%s\":\"%s\"", key, value);
 				}
 			jsonRequest += "}";
 		
@@ -442,12 +412,12 @@ public class FloodlightSDNConnector implements ISDNConnector {
      * 
      * 
      * @param node the SDNNode that has the entry to be deleted
-     * @param entryParams 
+     * @param rule 
      * 		Contains sets of key,value pairs describing the entry.
      */
 	@Override
 	public ISDNConnectorResponse deleteEntry(SDNNode node,
-			HashMap<String, Object> entryParams) throws IOException {
+			OFRule rule) throws Exception {
 		if (controller == null) {
 			return ISDNConnectorResponse.CONTROLLER_NOT_SET;
 		}
@@ -461,7 +431,7 @@ public class FloodlightSDNConnector implements ISDNConnector {
     	try {
 	 		String request = baseJSONRequest
 	 					.replaceAll("\\{switch\\}", switchDPID)
-						.replaceAll("\\{name\\}",   (String) entryParams.get("name"));
+						.replaceAll("\\{name\\}",   rule.get("name"));
 	 		delete(request);
     	}
     	catch (Exception e) {
