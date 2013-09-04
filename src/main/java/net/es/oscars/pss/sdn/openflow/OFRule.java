@@ -32,15 +32,17 @@ public class OFRule extends HashMap<String, String> {
 	private static String ANY_REGEX = "^.*$";
 
 	private static String OF_STR_ACTIONS = "actions";
-	private static String OF_STR_SET_VLAN = "set_vlan";
-	private static String OF_STR_STRIP_VLAN = "strip_vlan";
+	private static String OF_STR_SET_VLAN = "set-vlan-id";
+	private static String OF_STR_STRIP_VLAN = "strip-vlan";
+	private static String OF_STR_DL_VLAN = "dl_vlan";
+	private static String OF_STR_OUTPUT = "output";
 
 	// TODO: replace the strings on the maps below by class static strings
 	private static Map<String, String> OFACTIONS_REGEX = new HashMap<String, String>() {
 		private static final long serialVersionUID = -4517039142009168646L;
 		{
 			// actions
-			put("output", INT_REGEX);
+			put(OF_STR_OUTPUT, INT_REGEX);
 			put(OF_STR_SET_VLAN, INT_REGEX);
 			put(OF_STR_STRIP_VLAN, EMPTY_REGEX);
 		}
@@ -53,7 +55,7 @@ public class OFRule extends HashMap<String, String> {
 			put("dl_dst", MAC_REGEX);
 			put("dl_src", MAC_REGEX);
 			put("dl_type", HEX_REGEX);
-			put("dl_vlan", INT_REGEX);
+			put(OF_STR_DL_VLAN, INT_REGEX);
 			put("dl_vlan_pcp", INT_REGEX);
 			put("nw_dst", IP_REGEX);
 			put("nw_src", IP_REGEX);
@@ -62,7 +64,7 @@ public class OFRule extends HashMap<String, String> {
 			put("tp_dst", INT_REGEX);
 			put("tp_src", INT_REGEX);
 			// actions
-			put("output", INT_REGEX);
+			put(OF_STR_OUTPUT, INT_REGEX);
 			put(OF_STR_SET_VLAN, INT_REGEX);
 			put(OF_STR_STRIP_VLAN, EMPTY_REGEX);
 			// name
@@ -75,12 +77,12 @@ public class OFRule extends HashMap<String, String> {
 		private static final long serialVersionUID = -8409540222829712936L;
 
 		{
-			put("in_port", "output");
-			put("output", "in_port");
+			put("in_port", OF_STR_OUTPUT);
+			put(OF_STR_OUTPUT, "in_port");
 			put("dl_dst", "dl_src");
 			put("dl_src", "dl_dst");
-			put("dl_vlan", OF_STR_SET_VLAN);
-			put(OF_STR_SET_VLAN, "dl_vlan");
+			put(OF_STR_DL_VLAN, OF_STR_SET_VLAN);
+			put(OF_STR_SET_VLAN, OF_STR_DL_VLAN);
 
 			put("tp_dst", "tp_src");
 			put("tp_src", "tp_dst");
@@ -101,7 +103,7 @@ public class OFRule extends HashMap<String, String> {
 			put("dl_dst", "dst-mac");
 			put("dl_src", "src-mac");
 			put("dl_type", "ether-type");
-			put("dl_vlan", "vlan-id");
+			put(OF_STR_DL_VLAN, "vlan-id");
 			put("dl_vlan_pcp", "vlan-priority");
 			put("nw_dst", "dst-ip");
 			put("nw_src", "src-ip");
@@ -294,7 +296,7 @@ public class OFRule extends HashMap<String, String> {
 	private void rebuildOFActionString() throws Exception {
 		String set_vlan = "", strip_vlan = "", output = "";
 
-		if (!this.actions.containsKey("output"))
+		if (!this.actions.containsKey(OF_STR_OUTPUT))
 			throw new Exception("OSCARS require at least an OUTPUT action");
 
 		try {
@@ -306,7 +308,7 @@ public class OFRule extends HashMap<String, String> {
 					set_vlan = String.format("%s=%s,", key, value);
 				else if (key == OF_STR_STRIP_VLAN)
 					strip_vlan = String.format("%s,", key);
-				else if (key == "output")
+				else if (key == OF_STR_OUTPUT)
 					output = String.format("%s=%s", key, value);
 			}
 		} catch (Exception e) {
@@ -444,7 +446,7 @@ public class OFRule extends HashMap<String, String> {
 			boolean dstIsTagged, String dstVlan) {
 
 		if (srcIsTagged) {
-			this.put("dl_vlan", srcVlan);
+			this.put(OF_STR_DL_VLAN, srcVlan);
 		}
 		if (dstIsTagged) {
 			this.put(OF_STR_SET_VLAN, dstVlan);
