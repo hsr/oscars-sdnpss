@@ -65,10 +65,10 @@ public class FloodlightSDNConnector implements ISDNConnector {
 		OFRule forwardEntry = new OFRule(),
 			   reverseEntry = new OFRule();
 
-		forwardEntry.put("ingress-port", h.getSrcPort());
+		forwardEntry.put("in_port", h.getSrcPort());
 		forwardEntry.put("output", h.getDstPort());
 
-		reverseEntry.put("ingress-port", h.getDstPort());
+		reverseEntry.put("in_port", h.getDstPort());
 		reverseEntry.put("output", h.getSrcPort());
 
 		ISDNConnectorResponse response;
