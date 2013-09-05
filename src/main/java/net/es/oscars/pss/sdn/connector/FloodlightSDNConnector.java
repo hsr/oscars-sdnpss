@@ -67,7 +67,6 @@ public class FloodlightSDNConnector implements ISDNConnector {
 
 	public FloodlightSDNConnector() {
 		controller = null;
-		initRestResources();
 		hopRefCount = new HashMap<SDNHop, Integer>();
 	}
 
@@ -79,8 +78,12 @@ public class FloodlightSDNConnector implements ISDNConnector {
 
 	@Override
 	public ISDNConnectorResponse setConnectionAddress(String address) {
-		// TODO: check if we can establish a connection to the controller
-		controller = address;		
+		controller = address;
+		
+		restStoreResource = null;
+		restDeleteResource = null;
+		initRestResources();
+		
 		return ISDNConnectorResponse.SUCCESS;
 	}
 
