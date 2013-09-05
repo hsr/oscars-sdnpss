@@ -29,6 +29,28 @@ public class FloodlightSDNConnector implements ISDNConnector {
 	private static final Logger log = Logger
 			.getLogger(FloodlightSDNConnector.class.getName());
 
+	private static ClientResource restStoreResource = null;
+	private static ClientResource restDeleteResource = null;
+	
+	private void initRestResources() {
+		try {
+			
+			if (restStoreResource == null)
+				restStoreResource = new ClientResource(controller
+						+ "/wm/staticflowentrypusher/json/store");
+		
+			if (restDeleteResource == null)
+				restDeleteResource  = new ClientResource(controller
+					+ "/wm/staticflowentrypusher/json/delete");
+		}
+		catch (Exception e) {
+			restStoreResource = null;
+			restDeleteResource = null;
+			log.error("Could not create restlet resources!");
+		}
+		
+	}
+	
 	/**
 	 * Floodlight circuits on emulated L2 switches aren't purely in->out port
 	 * mappings.
@@ -45,17 +67,20 @@ public class FloodlightSDNConnector implements ISDNConnector {
 
 	public FloodlightSDNConnector() {
 		controller = null;
+		initRestResources();
 		hopRefCount = new HashMap<SDNHop, Integer>();
 	}
 
 	public FloodlightSDNConnector(String address) {
 		controller = address;
+		initRestResources();
+		hopRefCount = new HashMap<SDNHop, Integer>();
 	}
 
 	@Override
 	public ISDNConnectorResponse setConnectionAddress(String address) {
 		// TODO: check if we can establish a connection to the controller
-		controller = address;
+		controller = address;		
 		return ISDNConnectorResponse.SUCCESS;
 	}
 
@@ -445,8 +470,7 @@ public class FloodlightSDNConnector implements ISDNConnector {
 	private void store(String request) throws IOException {
 		log.debug("Storing entry: " + request);
 		try {
-			ClientResource cr = new ClientResource(controller
-					+ "/wm/staticflowentrypusher/json/store");
+			ClientResource cr = restStoreResource;
 			cr.post(request);
 			// TODO: parse result
 		} catch (Exception e) {
@@ -457,8 +481,7 @@ public class FloodlightSDNConnector implements ISDNConnector {
 	private void delete(String request) throws IOException {
 		log.debug("Deleting entry: " + request);
 		try {
-			ClientResource cr = new ClientResource(controller
-					+ "/wm/staticflowentrypusher/json/delete");
+			ClientResource cr = restDeleteResource;
 			cr.post(request);
 			// TODO: parse result
 		} catch (Exception e) {
