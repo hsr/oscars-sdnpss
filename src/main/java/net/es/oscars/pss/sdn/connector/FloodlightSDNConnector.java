@@ -327,7 +327,10 @@ public class FloodlightSDNConnector implements ISDNConnector {
 
 			// Check for capabilities
 			if (h.getCapabilities().contains(SDNCapability.L2) && rule != null) {
-				response = setupL2Hop(h, circuitID, rule);
+				if (!h.isEntryHop() && !h.isExitHop())
+					response = setupL2Bypass(h, circuitID, rule);
+				else
+					response = setupL2Hop(h, circuitID, rule);
 				if (response != ISDNConnectorResponse.SUCCESS)
 					return response;
 			}
