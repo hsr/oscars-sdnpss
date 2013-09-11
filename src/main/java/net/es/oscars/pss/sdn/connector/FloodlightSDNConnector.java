@@ -1,6 +1,7 @@
 package net.es.oscars.pss.sdn.connector;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -274,7 +275,7 @@ public class FloodlightSDNConnector implements ISDNConnector {
 	 * 
 	 * L1 > MPLS > VLAN > L2 > L3
 	 */
-	public final class LinkSetupOrder implements Comparator<SDNObject> {
+	public final class CircuitSetupOrder implements Comparator<SDNObject> {
 		@Override
 		public int compare(SDNObject link1, SDNObject link2) {
 			SDNCapability[] priority = { SDNCapability.L1, SDNCapability.MPLS,
@@ -306,7 +307,7 @@ public class FloodlightSDNConnector implements ISDNConnector {
 		}
 
 		// Get hop setup order.
-		Collections.sort(hops, new LinkSetupOrder());
+		Collections.sort(hops, new CircuitSetupOrder());
 
 		ISDNConnectorResponse response;
 		
@@ -494,4 +495,214 @@ public class FloodlightSDNConnector implements ISDNConnector {
 			throw new IOException(e.getMessage());
 		}
 	}
+
+	/**
+	 * Setup circuit using GMPLS for L0/1 devices
+	 * 
+	 * WARNING: this is not supposed to be done in practice! GMPLS provisioning
+	 * is orthogonal to SDN provisioning. The path that GMPLS provision could be
+	 * different from the path that OSCARS compute. This method is here just to
+	 * demonstrate the functionality, but it is not supposed to be used in
+	 * practice.
+	 * 
+	 */
+	@Override
+	public ISDNConnectorResponse setupCircuitImplicitly(List<SDNHop> hops,
+			String circuitID, OFRule rule) throws Exception {
+		if (controller == null) {
+			return ISDNConnectorResponse.CONTROLLER_NOT_SET;
+		}
+
+		// Don't reorder hops, they will be setup sequentially
+		// Collections.sort(hops, new CircuitSetupOrder());
+
+		// The following code builds two lists, one with circuits supposed
+		// to be setup implicitly using GMPL and another with regular hops
+		// (explicitHops).
+		List<List<SDNHop>> implicitCircuits = new ArrayList<List<SDNHop>>();
+		List<SDNHop> explicitHops = new ArrayList<SDNHop>();
+
+		SDNHop implicitHopPtr = null;
+		List<SDNHop> implicitCircuitPtr = null;
+
+		for (SDNHop h : hops) {
+			List<SDNCapability> capabilities = h.getCapabilities();
+			if (capabilities.size() == 1
+					&& capabilities.contains(SDNCapability.L1)) {
+				// L1 device
+				if (implicitHopPtr == null) {
+					implicitCircuitPtr = new ArrayList<SDNHop>();
+					implicitCircuits.add(implicitCircuitPtr);
+				}
+				implicitCircuitPtr.add(h);
+				implicitHopPtr = h;
+			} else {
+				// non L1 devices
+				implicitHopPtr = null;
+				explicitHops.add(h);
+			}
+		}
+
+		ISDNConnectorResponse response;
+		// Setup implicit connections
+		for (List<SDNHop> implicitCircuit : implicitCircuits) {
+			SDNHop startHop = implicitCircuit.get(0);
+			SDNHop endHop = implicitCircuit.get(implicitCircuit.size() - 1);
+			response = setupImplicitHop(startHop, endHop, circuitID);
+			if (response != ISDNConnectorResponse.SUCCESS)
+				return response;
+		}
+
+		// Setup regular connections
+		for (SDNHop h : explicitHops) {
+			// Check for capabilities
+			if (h.getCapabilities().contains(SDNCapability.L2) && rule != null) {
+				if (!h.isEntryHop() && !h.isExitHop())
+					response = setupL2Bypass(h, circuitID, rule);
+				else
+					response = setupL2Hop(h, circuitID, rule);
+				if (response != ISDNConnectorResponse.SUCCESS)
+					return response;
+			} else {
+				response = setupL1Hop(h, circuitID);
+				if (response != ISDNConnectorResponse.SUCCESS)
+					return response;
+			}
+		}
+
+		return ISDNConnectorResponse.SUCCESS;
+	}
+
+	private ISDNConnectorResponse setupImplicitHop(SDNHop src, SDNHop dst,
+			String circuitID) throws Exception {
+
+		log.debug("start setupImplicitHop");
+
+		String[] srcTribInfo = src.getSrcLink().split("/");
+		String[] dstTribInfo = src.getDstLink().split("/");
+
+		if (srcTribInfo.length < 2 || dstTribInfo.length < 2)
+			throw new Exception("Invalid trib info in URN");
+
+		String dl_src = srcTribInfo[0].replaceAll(".", ":"); // dst trib AID
+		String dl_dst = dstTribInfo[0].replaceAll(".", ":"); // dst trib AID
+		String nw_src = srcTribInfo[1]; // src router ID
+		String nw_dst = dstTribInfo[1]; // dst router ID
+
+		if (!dl_src.matches(OFRule.MAC_REGEX)
+				|| !dl_dst.matches(OFRule.MAC_REGEX)
+				|| !nw_src.matches(OFRule.IP_REGEX)
+				|| !nw_dst.matches(OFRule.IP_REGEX))
+			throw new Exception("Invalid trib format in URN");
+
+		OFRule rule = new OFRule();
+
+		rule.put("in_port", src.getSrcPort());
+		rule.put("output", dst.getDstPort());
+		rule.put("dl_src", dl_src);
+		rule.put("dl_dst", dl_dst);
+		rule.put("nw_src", nw_src);
+		rule.put("nw_dst", nw_dst);
+
+		String entryID = src.hashCode() + ".gmpls." + dst.hashCode();
+		rule.put("name", entryID);
+
+		ISDNConnectorResponse response;
+
+		response = installEntry(src.getNode(), rule);
+		if (response != ISDNConnectorResponse.SUCCESS)
+			return response;
+
+		log.debug("end setupImplicitHop");
+		return ISDNConnectorResponse.SUCCESS;
+	}
+
+	private ISDNConnectorResponse teardownImplicitHop(SDNHop src, SDNHop dst,
+			String circuitID) throws Exception {
+		OFRule rule = new OFRule();
+
+		String entryID = src.hashCode() + ".gmpls." + dst.hashCode();
+		rule.put("name", entryID);
+
+		ISDNConnectorResponse response;
+		response = deleteEntry(src.getNode(), rule);
+		if (response != ISDNConnectorResponse.SUCCESS)
+			return response;
+
+		return ISDNConnectorResponse.SUCCESS;
+	}
+
+	
+    /**
+	 * teardown circuit previously setupCircuitImplicitly
+	 * 
+	 * WARNING: this is not supposed to be done in practice! GMPLS provisioning
+	 *          is orthogonal to SDN provisioning. The path that GMPLS provision
+	 *          could be different from the path that OSCARS compute. This method
+	 *          is here just to demonstrate the functionality, but it is not supposed
+	 *          to be used in practice.
+	 */
+	@Override
+	public ISDNConnectorResponse teardownCircuitImplicitly(List<SDNHop> hops,
+			String circuitID) throws Exception {
+		if (controller == null) {
+			return ISDNConnectorResponse.CONTROLLER_NOT_SET;
+		}
+
+		// Don't reorder hops, they will be setup sequentially
+		// Collections.sort(hops, new CircuitSetupOrder());
+
+		// The following code builds two lists, one with circuits supposed
+		// to be setup implicitly using GMPL and another with regular hops
+		// (explicitHops).
+		List<List<SDNHop>> implicitCircuits = new ArrayList<List<SDNHop>>();
+		List<SDNHop> explicitHops = new ArrayList<SDNHop>();
+
+		SDNHop implicitHopPtr = null;
+		List<SDNHop> implicitCircuitPtr = null;
+
+		for (SDNHop h : hops) {
+			List<SDNCapability> capabilities = h.getCapabilities();
+			if (capabilities.size() == 1
+					&& capabilities.contains(SDNCapability.L1)) {
+				// L1 device
+				if (implicitHopPtr == null) {
+					implicitCircuitPtr = new ArrayList<SDNHop>();
+					implicitCircuits.add(implicitCircuitPtr);
+				}
+				implicitCircuitPtr.add(h);
+				implicitHopPtr = h;
+			} else {
+				// non L1 devices
+				implicitHopPtr = null;
+				explicitHops.add(h);
+			}
+		}
+
+		
+		ISDNConnectorResponse response;
+		// Setup implicit connections
+		for (List<SDNHop> implicitCircuit : implicitCircuits) {
+			SDNHop startHop = implicitCircuit.get(0);
+			SDNHop endHop = implicitCircuit.get(implicitCircuit.size() - 1);
+			response = teardownImplicitHop(startHop, endHop, circuitID);
+			if (response != ISDNConnectorResponse.SUCCESS)
+				return response;
+		}
+
+		// Setup regular connections
+		for (SDNHop h : explicitHops) {
+			response = teardownL1Hop(h, circuitID);
+			if (response != ISDNConnectorResponse.SUCCESS)
+				return response;
+
+			response = teardownL2Hop(h, circuitID);
+			if (response != ISDNConnectorResponse.SUCCESS)
+				return response;
+		}
+
+		return ISDNConnectorResponse.SUCCESS;
+		
+	}
+
 }

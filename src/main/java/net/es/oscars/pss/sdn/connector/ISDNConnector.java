@@ -90,7 +90,37 @@ public interface ISDNConnector {
 
 
 
+    
+    /**
+	 * Setup circuit using GMPLS for L0/1 devices
+	 * 
+	 * WARNING: this is not supposed to be done in practice! GMPLS provisioning
+	 *          is orthogonal to SDN provisioning. The path that GMPLS provision
+	 *          could be different from the path that OSCARS compute. This method
+	 *          is here just to demonstrate the functionality, but it is not supposed
+	 *          to be used in practice.
+	 * 
+	 * @param hops a list of SDNHops (List<SDNHop>) that describes each hop in the circuit
+	 * @param rule OpenFlow rule 
+     * @throws Exception
+	 */
+	public ISDNConnectorResponse setupCircuitImplicitly(List<SDNHop> hops,
+			String circuitID, OFRule rule) throws Exception;
 
 
-
+    /**
+	 * teardown circuit previously setupCircuitImplicitly
+	 * 
+	 * WARNING: this is not supposed to be done in practice! GMPLS provisioning
+	 *          is orthogonal to SDN provisioning. The path that GMPLS provision
+	 *          could be different from the path that OSCARS compute. This method
+	 *          is here just to demonstrate the functionality, but it is not supposed
+	 *          to be used in practice.
+	 * 
+	 * @param hops a list of SDNHops (List<SDNHop>) that describes each hop in the circuit
+     * @throws Exception
+	 */
+	public ISDNConnectorResponse teardownCircuitImplicitly(List<SDNHop> hops,
+			String circuitID) throws Exception;
+	
 }

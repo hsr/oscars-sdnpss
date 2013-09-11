@@ -63,17 +63,30 @@ public class SdnPSSSoapHandler implements PSSPortType {
 			hops = BaseSDNTopologyService.extractSDNHops(pi.getPath().getHop());
 		} catch (Exception e) {
 			log.info("Couldn't get path: " + e.getMessage());
+
+			notifyCoordinator(setupReq.getTransactionId(), ActionType.SETUP,
+					setupReq, ActionStatus.FAIL);
+			log.info(netLogger.end(event));
+			return;
 		}
 
 		CircuitServiceConfig circuitServiceConfig = ConfigHolder.getInstance()
 				.getBaseConfig().getCircuitService();
 		Map<String, String> circuitServiceParams = circuitServiceConfig
 				.getParams();
-		
-		// TODO: here we use the description field of the reservation
-		// to specify a OFMatch. The correct way to do it is to add a field 
-		// in the WBUI to specify the OFMatch instead of reading it from the description.
+
+		// TODO: here we use the description field of the reservation to specify
+		// an OFRule and to identify implicit provision. The correct way to do
+		// it is to add a field in the WBUI to specify the OFRule and implicit
+		// mode instead of reading it from the description.
 		String description = setupReq.getReservation().getDescription();
+
+		boolean useImplicitProvision = false;
+		if (description.matches("^implicit.*")) {
+			useImplicitProvision = true;
+			if (description.length() > "implicit".length())
+				description = description.substring("implicit,".length());
+		}
 
 		OFRule rule;
 		try {
@@ -82,37 +95,43 @@ public class SdnPSSSoapHandler implements PSSPortType {
 			log.debug("Provided rule isn't valid");
 			rule = new OFRule();
 		}
-		
+
 		VlanTag srcVlan = pi.getLayer2Info().getSrcVtag();
 		VlanTag dstVlan = pi.getLayer2Info().getDestVtag();
-		rule.putVlan(srcVlan.isTagged(), srcVlan.getValue(), 
-					 dstVlan.isTagged(), dstVlan.getValue());
-		
+		rule.putVlan(srcVlan.isTagged(), srcVlan.getValue(),
+				dstVlan.isTagged(), dstVlan.getValue());
+
 		try {
 			if (circuitServiceParams.containsKey("controller")) {
 				sdnConnector.setConnectionAddress(circuitServiceParams
 						.get("controller"));
-				
-				if ((hops != null) && (hops.size() > 0) && 
-						(sdnConnector.setupCircuit(hops, gri, rule) == 
-						ISDNConnectorResponse.SUCCESS)) {
-					
-					notifyCoordinator(setupReq.getTransactionId(), 
-							ActionType.SETUP, setupReq, ActionStatus.SUCCESS);
 
-			        log.info(netLogger.end(event));
-					return;
+				if ((hops != null) && (hops.size() > 0)) {
+					ISDNConnectorResponse response;
+					if (useImplicitProvision)
+						response = sdnConnector.setupCircuitImplicitly(hops,
+								gri, rule);
+					else
+						response = sdnConnector.setupCircuit(hops, gri, rule);
+
+					if (response == ISDNConnectorResponse.SUCCESS) {
+						notifyCoordinator(setupReq.getTransactionId(),
+								ActionType.SETUP, setupReq,
+								ActionStatus.SUCCESS);
+
+						log.info(netLogger.end(event));
+						return;
+					}
 				}
 			}
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			log.error("Couldn't setup circuit: " + e.getMessage());
 			e.printStackTrace();
 		}
-		
-		notifyCoordinator(setupReq.getTransactionId(), 
-				ActionType.SETUP, setupReq, ActionStatus.FAIL);
-	
+
+		notifyCoordinator(setupReq.getTransactionId(), ActionType.SETUP,
+				setupReq, ActionStatus.FAIL);
+
 		log.info(netLogger.end(event));
 	}
 
@@ -123,13 +142,19 @@ public class SdnPSSSoapHandler implements PSSPortType {
 		netLogger.setGRI(gri);
 		List<SDNHop> hops = null;
 
-        log.info(netLogger.start("teardown"));
+		log.info(netLogger.start("teardown"));
 
 		try {
-			hops = BaseSDNTopologyService.extractSDNHops(teardownReq.getReservation()
-					.getReservedConstraint().getPathInfo().getPath().getHop());
+			hops = BaseSDNTopologyService.extractSDNHops(teardownReq
+					.getReservation().getReservedConstraint().getPathInfo()
+					.getPath().getHop());
 		} catch (Exception e) {
 			log.info("Couldn't get path: " + e.getMessage());
+
+			notifyCoordinator(teardownReq.getTransactionId(),
+					ActionType.TEARDOWN, teardownReq, ActionStatus.FAIL);
+			log.info(netLogger.end("teardown"));
+			return;
 		}
 
 		CircuitServiceConfig circuitServiceConfig = ConfigHolder.getInstance()
@@ -137,111 +162,130 @@ public class SdnPSSSoapHandler implements PSSPortType {
 		Map<String, String> circuitServiceParams = circuitServiceConfig
 				.getParams();
 
+		// TODO: here we use the description field of the reservation to specify
+		// an OFRule and to identify implicit provision. The correct way to do
+		// it is to add a field in the WBUI to specify the OFRule and implicit
+		// mode instead of reading it from the description.
+		String description = teardownReq.getReservation().getDescription();
+
+		boolean useImplicitProvision = false;
+		if (description.matches("^implicit.*")) {
+			useImplicitProvision = true;
+			if (description.length() > "implicit".length())
+				description = description.substring("implicit,".length());
+		}
+
 		try {
 			if (circuitServiceParams.containsKey("controller")) {
 				sdnConnector.setConnectionAddress(circuitServiceParams
 						.get("controller"));
-				
-				if ((hops != null) && (hops.size() > 0) && (
-					sdnConnector.teardownCircuit(hops, gri) ==
-						ISDNConnectorResponse.SUCCESS)) {
-					
-						notifyCoordinator(teardownReq.getTransactionId(), 
-							ActionType.TEARDOWN, teardownReq, ActionStatus.SUCCESS);
 
-				        log.info(netLogger.end("teardown"));
+				if ((hops != null) && (hops.size() > 0)) {
+					ISDNConnectorResponse response;
+					if (useImplicitProvision)
+						response = sdnConnector.teardownCircuitImplicitly(hops,
+								gri);
+					else
+						response = sdnConnector.teardownCircuit(hops, gri);
+
+					if (response == ISDNConnectorResponse.SUCCESS) {
+						notifyCoordinator(teardownReq.getTransactionId(),
+								ActionType.TEARDOWN, teardownReq,
+								ActionStatus.SUCCESS);
+
+						log.info(netLogger.end("teardown"));
 						return;
+					}
 				}
 			}
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			log.error("Couldn't teardown circuit: " + e.getMessage());
 			e.printStackTrace();
 		}
-		
-		notifyCoordinator(teardownReq.getTransactionId(), 
-				ActionType.TEARDOWN, teardownReq, ActionStatus.FAIL);
+
+		notifyCoordinator(teardownReq.getTransactionId(), ActionType.TEARDOWN,
+				teardownReq, ActionStatus.FAIL);
 
 		log.info(netLogger.end("teardown"));
 	}
 
 	public void modify(ModifyReqContent modifyReq) {
-//		String event = "modify";
-//		OSCARSNetLogger netLogger = OSCARSNetLogger.getTlogger();
-//		netLogger.init(moduleName, modifyReq.getTransactionId());
-//		String gri = modifyReq.getReservation().getGlobalReservationId();
-//		netLogger.setGRI(gri);
-//		log.info(netLogger.start(event));
-//
-//		PSSAction act = new PSSAction();
-//		CoordNotifier coordNotify = new CoordNotifier();
-//		try {
-//			PSSRequest req = new PSSRequest();
-//			req.setModifyReq(modifyReq);
-//			req.setRequestType(PSSRequest.PSSRequestTypes.MODIFY);
-//
-//			act.setRequest(req);
-//			act.setActionType(net.es.oscars.pss.enums.ActionType.MODIFY);
-//			OSCARSFaultReport faultReport = new OSCARSFaultReport();
-//			faultReport.setErrorMsg("Modify not supported");
-//			faultReport.setErrorType(ErrorReport.SYSTEM);
-//			faultReport.setErrorCode(ErrorCodes.NOT_IMPLEMENTED);
-//			act.setFaultReport(faultReport);
-//			act.setStatus(ActionStatus.FAIL);
-//			coordNotify.process(act);
-//		} catch (PSSException e) {
-//			log.error(netLogger.error(event, ErrSev.MAJOR,
-//					"caught PSSException " + e.getMessage()));
-//		}
-//		log.info(netLogger.end(event));
-		
-		notifyCoordinator(modifyReq.getTransactionId(), ActionType.MODIFY, 
+		// String event = "modify";
+		// OSCARSNetLogger netLogger = OSCARSNetLogger.getTlogger();
+		// netLogger.init(moduleName, modifyReq.getTransactionId());
+		// String gri = modifyReq.getReservation().getGlobalReservationId();
+		// netLogger.setGRI(gri);
+		// log.info(netLogger.start(event));
+		//
+		// PSSAction act = new PSSAction();
+		// CoordNotifier coordNotify = new CoordNotifier();
+		// try {
+		// PSSRequest req = new PSSRequest();
+		// req.setModifyReq(modifyReq);
+		// req.setRequestType(PSSRequest.PSSRequestTypes.MODIFY);
+		//
+		// act.setRequest(req);
+		// act.setActionType(net.es.oscars.pss.enums.ActionType.MODIFY);
+		// OSCARSFaultReport faultReport = new OSCARSFaultReport();
+		// faultReport.setErrorMsg("Modify not supported");
+		// faultReport.setErrorType(ErrorReport.SYSTEM);
+		// faultReport.setErrorCode(ErrorCodes.NOT_IMPLEMENTED);
+		// act.setFaultReport(faultReport);
+		// act.setStatus(ActionStatus.FAIL);
+		// coordNotify.process(act);
+		// } catch (PSSException e) {
+		// log.error(netLogger.error(event, ErrSev.MAJOR,
+		// "caught PSSException " + e.getMessage()));
+		// }
+		// log.info(netLogger.end(event));
+
+		notifyCoordinator(modifyReq.getTransactionId(), ActionType.MODIFY,
 				modifyReq, ActionStatus.SUCCESS);
 
 		return;
 	}
 
 	public void status(StatusReqContent statusReq) {
-//		String event = "status";
-//		OSCARSNetLogger netLogger = OSCARSNetLogger.getTlogger();
-//		netLogger.init(moduleName, statusReq.getTransactionId());
-//		String gri = statusReq.getReservation().getGlobalReservationId();
-//		netLogger.setGRI(gri);
-//		log.info(netLogger.start(event));
-//
-//		PSSAction act = new PSSAction();
-//		CoordNotifier coordNotify = new CoordNotifier();
-//		try {
-//			PSSRequest req = new PSSRequest();
-//			req.setStatusReq(statusReq);
-//			req.setRequestType(PSSRequest.PSSRequestTypes.STATUS);
-//
-//			act.setRequest(req);
-//			act.setActionType(net.es.oscars.pss.enums.ActionType.STATUS);
-//			OSCARSFaultReport faultReport = new OSCARSFaultReport();
-//			faultReport.setErrorMsg("Status not supported");
-//			faultReport.setErrorType(ErrorReport.SYSTEM);
-//			faultReport.setErrorCode(ErrorCodes.NOT_IMPLEMENTED);
-//			act.setFaultReport(faultReport);
-//			act.setStatus(ActionStatus.FAIL);
-//			coordNotify.process(act);
-//		} catch (PSSException e) {
-//			log.error(netLogger.error(event, ErrSev.MAJOR,
-//					"caught PSSException " + e.getMessage()));
-//		}
-//		log.info(netLogger.end(event));
-		notifyCoordinator(statusReq.getTransactionId(), ActionType.STATUS, 
-			statusReq, ActionStatus.SUCCESS);
-		
+		// String event = "status";
+		// OSCARSNetLogger netLogger = OSCARSNetLogger.getTlogger();
+		// netLogger.init(moduleName, statusReq.getTransactionId());
+		// String gri = statusReq.getReservation().getGlobalReservationId();
+		// netLogger.setGRI(gri);
+		// log.info(netLogger.start(event));
+		//
+		// PSSAction act = new PSSAction();
+		// CoordNotifier coordNotify = new CoordNotifier();
+		// try {
+		// PSSRequest req = new PSSRequest();
+		// req.setStatusReq(statusReq);
+		// req.setRequestType(PSSRequest.PSSRequestTypes.STATUS);
+		//
+		// act.setRequest(req);
+		// act.setActionType(net.es.oscars.pss.enums.ActionType.STATUS);
+		// OSCARSFaultReport faultReport = new OSCARSFaultReport();
+		// faultReport.setErrorMsg("Status not supported");
+		// faultReport.setErrorType(ErrorReport.SYSTEM);
+		// faultReport.setErrorCode(ErrorCodes.NOT_IMPLEMENTED);
+		// act.setFaultReport(faultReport);
+		// act.setStatus(ActionStatus.FAIL);
+		// coordNotify.process(act);
+		// } catch (PSSException e) {
+		// log.error(netLogger.error(event, ErrSev.MAJOR,
+		// "caught PSSException " + e.getMessage()));
+		// }
+		// log.info(netLogger.end(event));
+		notifyCoordinator(statusReq.getTransactionId(), ActionType.STATUS,
+				statusReq, ActionStatus.SUCCESS);
+
 		return;
 	}
 
-	private void notifyCoordinator(String transactionId, 
-			ActionType type, Object reqContent, ActionStatus status) {
+	private void notifyCoordinator(String transactionId, ActionType type,
+			Object reqContent, ActionStatus status) {
 		PSSAction act = new PSSAction();
 		CoordNotifier coordNotify = new CoordNotifier();
 		PSSRequest req = new PSSRequest();
-		
+
 		switch (type) {
 		case SETUP:
 			req.setSetupReq((SetupReqContent) reqContent);
@@ -281,14 +325,12 @@ public class SdnPSSSoapHandler implements PSSPortType {
 			act.setFaultReport(faultReport);
 		}
 
-		try {			
+		try {
 			coordNotify.process(act);
-		}
-		catch (PSSException e) {
-			log.error("Could not teardown circuit, caught PSSException: " 
-				+ e.getMessage());
-		}
-		catch (Exception e) {
+		} catch (PSSException e) {
+			log.error("Could not teardown circuit, caught PSSException: "
+					+ e.getMessage());
+		} catch (Exception e) {
 			log.debug("Could not teardown circuit: " + e.getMessage());
 		}
 	}

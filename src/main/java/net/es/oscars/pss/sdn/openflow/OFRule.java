@@ -1,12 +1,9 @@
 package net.es.oscars.pss.sdn.openflow;
 
-import java.util.HashSet;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.Set;
-
-import net.es.oscars.topoBridge.sdn.SDNHop;
 
 /**
  * OFRule represents an entry in an OpenFlow table. It is basically a map of
@@ -16,16 +13,19 @@ import net.es.oscars.topoBridge.sdn.SDNHop;
  * 
  * @author Henrique Rodrigues <hsr@cs.ucsd.edu>
  * 
+ * TODO: create a new child class FloodlightOFRule that extends this, but that
+ * override the entrySet() method to return Floodlight specific tokens using
+ * Floodlight's specific translation.
  */
 public class OFRule extends HashMap<String, String> {
 	private static final long serialVersionUID = 5955370395586986465L;
 
-	private static String IP_REGEX = "" + "^([01]?\\d\\d?|2[0-4]\\d|25[0-5])"
+	public static String IP_REGEX = "" + "^([01]?\\d\\d?|2[0-4]\\d|25[0-5])"
 			+ "\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])"
 			+ "\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])"
 			+ "\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])(\\/(\\d|[1-2]\\d|3[0-2]))$";
 
-	private static String MAC_REGEX = "^([0-9A-Fa-f]{2}[:]){5}([0-9A-Fa-f]{2})$";
+	public static String MAC_REGEX = "^([0-9A-Fa-f]{2}[:]){5}([0-9A-Fa-f]{2})$";
 	private static String INT_REGEX = "^[1-9]\\d*$";
 	private static String HEX_REGEX = "^(0x|)[0-9A-Fa-f]*$";
 	private static String EMPTY_REGEX = "^$";
