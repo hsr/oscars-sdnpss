@@ -13,9 +13,9 @@ import java.util.Set;
  * 
  * @author Henrique Rodrigues <hsr@cs.ucsd.edu>
  * 
- * TODO: create a new child class FloodlightOFRule that extends this, but that
- * override the entrySet() method to return Floodlight specific tokens using
- * Floodlight's specific translation.
+ *         TODO: create a new child class FloodlightOFRule that extends this,
+ *         but that override the entrySet() method to return Floodlight specific
+ *         tokens using Floodlight's specific translation.
  */
 public class OFRule extends HashMap<String, String> {
 	private static final long serialVersionUID = 5955370395586986465L;
@@ -36,6 +36,8 @@ public class OFRule extends HashMap<String, String> {
 	private static String OF_STR_STRIP_VLAN = "strip-vlan";
 	private static String OF_STR_DL_VLAN = "dl_vlan";
 	private static String OF_STR_OUTPUT = "output";
+	private static String OF_STR_NW_DST = "nw_dst";
+	private static String OF_STR_NW_SRC = "nw_src";
 
 	// TODO: replace the strings on the maps below by class static strings
 	private static Map<String, String> OFACTIONS_REGEX = new HashMap<String, String>() {
@@ -57,8 +59,8 @@ public class OFRule extends HashMap<String, String> {
 			put("dl_type", HEX_REGEX);
 			put(OF_STR_DL_VLAN, INT_REGEX);
 			put("dl_vlan_pcp", INT_REGEX);
-			put("nw_dst", IP_REGEX);
-			put("nw_src", IP_REGEX);
+			put(OF_STR_NW_DST, IP_REGEX);
+			put(OF_STR_NW_SRC, IP_REGEX);
 			put("nw_proto", INT_REGEX);
 			put("nw_tos", INT_REGEX);
 			put("tp_dst", INT_REGEX);
@@ -87,7 +89,8 @@ public class OFRule extends HashMap<String, String> {
 			put("tp_dst", "tp_src");
 			put("tp_src", "tp_dst");
 			put("nw_tos", "nw_tos");
-			put("nw_dst", "nw_src");
+			put(OF_STR_NW_DST, OF_STR_NW_SRC);
+			put(OF_STR_NW_SRC, OF_STR_NW_DST);
 			put("dl_type", "dl_type");
 			put("nw_proto", "nw_proto");
 			put(OF_STR_STRIP_VLAN, "");
@@ -105,8 +108,8 @@ public class OFRule extends HashMap<String, String> {
 			put("dl_type", "ether-type");
 			put(OF_STR_DL_VLAN, "vlan-id");
 			put("dl_vlan_pcp", "vlan-priority");
-			put("nw_dst", "dst-ip");
-			put("nw_src", "src-ip");
+			put(OF_STR_NW_DST, "dst-ip");
+			put(OF_STR_NW_SRC, "src-ip");
 			put("nw_proto", "protocol");
 			put("nw_tos", "tos-bits");
 			put("tp_dst", "dst-port");
@@ -254,8 +257,10 @@ public class OFRule extends HashMap<String, String> {
 	}
 
 	/**
-	 * @return Floodlight staticflowpusher formatted key,value pairs updates the
-	 *         "actions" key value before returning all the pairs.
+	 * @return Floodlight staticflowpusher formatted key,value pairs.
+	 * 
+	 *         This method updates the "actions" key value before returning all
+	 *         the pairs.
 	 */
 	public Set<Entry<String, String>> floodlightEntrySet() {
 		try {
@@ -270,8 +275,15 @@ public class OFRule extends HashMap<String, String> {
 		for (Map.Entry<String, String> entry : super.entrySet()) {
 			try {
 				String key = entry.getKey();
+				
 				if (OFRULE_TO_FLOODLIGHT.containsKey(key)) {
-					r.put(OFRULE_TO_FLOODLIGHT.get(key), entry.getValue());
+					String value = entry.getValue();
+					// Add netmask if not present
+					if ((key.equals(OF_STR_NW_DST) || key.equals(OF_STR_NW_SRC))
+						&& !value.matches(".*\\/.*")) {
+						value += "/32";
+					} 
+					r.put(OFRULE_TO_FLOODLIGHT.get(key), value);
 				} else {
 					r.put(key, entry.getValue());
 					System.out
