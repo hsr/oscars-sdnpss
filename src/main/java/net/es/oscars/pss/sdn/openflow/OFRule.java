@@ -23,7 +23,7 @@ public class OFRule extends HashMap<String, String> {
 	public static String IP_REGEX = "" + "^([01]?\\d\\d?|2[0-4]\\d|25[0-5])"
 			+ "\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])"
 			+ "\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])"
-			+ "\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])(\\/(\\d|[1-2]\\d|3[0-2]))$";
+			+ "\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])(|(\\/(\\d|[1-2]\\d|3[0-2])))$";
 
 	public static String MAC_REGEX = "^([0-9A-Fa-f]{2}[:]){5}([0-9A-Fa-f]{2})$";
 	private static String INT_REGEX = "^[1-9]\\d*$";

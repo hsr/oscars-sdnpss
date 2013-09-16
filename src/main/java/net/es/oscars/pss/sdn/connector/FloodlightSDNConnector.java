@@ -577,24 +577,25 @@ public class FloodlightSDNConnector implements ISDNConnector {
 	private ISDNConnectorResponse setupImplicitHop(SDNHop src, SDNHop dst,
 			String circuitID) throws Exception {
 
-		log.debug("start setupImplicitHop");
+		log.debug("start setupImplicitHop " + src.getSrcLink() + " " + dst.getDstLink());
 
 		String[] srcTribInfo = src.getSrcLink().split("/");
-		String[] dstTribInfo = src.getDstLink().split("/");
+		String[] dstTribInfo = dst.getDstLink().split("/");
 
 		if (srcTribInfo.length < 2 || dstTribInfo.length < 2)
-			throw new Exception("Invalid trib info in URN");
+			throw new Exception("Invalid trib info in URN " + src.getSrcLink() + " " + dst.getDstLink());
 
-		String dl_src = srcTribInfo[0].replaceAll(".", ":"); // dst trib AID
-		String dl_dst = dstTribInfo[0].replaceAll(".", ":"); // dst trib AID
+		String dl_src = srcTribInfo[0].replaceAll("\\.", ":"); // dst trib AID
+		String dl_dst = dstTribInfo[0].replaceAll("\\.", ":"); // dst trib AID
 		String nw_src = srcTribInfo[1]; // src router ID
 		String nw_dst = dstTribInfo[1]; // dst router ID
 
 		if (!dl_src.matches(OFRule.MAC_REGEX)
 				|| !dl_dst.matches(OFRule.MAC_REGEX)
 				|| !nw_src.matches(OFRule.IP_REGEX)
-				|| !nw_dst.matches(OFRule.IP_REGEX))
-			throw new Exception("Invalid trib format in URN");
+				|| !nw_dst.matches(OFRule.IP_REGEX)) {
+			throw new Exception("Invalid trib format in URN " + dl_src + " " + dl_dst + " " + src.getSrcLink() + " " + dst.getDstLink());
+		}
 
 		OFRule rule = new OFRule();
 
@@ -682,7 +683,7 @@ public class FloodlightSDNConnector implements ISDNConnector {
 
 		
 		ISDNConnectorResponse response;
-		// Setup implicit connections
+		// Teardown implicit circuits
 		for (List<SDNHop> implicitCircuit : implicitCircuits) {
 			SDNHop startHop = implicitCircuit.get(0);
 			SDNHop endHop = implicitCircuit.get(implicitCircuit.size() - 1);
@@ -691,15 +692,22 @@ public class FloodlightSDNConnector implements ISDNConnector {
 				return response;
 		}
 
-		// Setup regular connections
+		// Teardown regular hops
 		for (SDNHop h : explicitHops) {
-			response = teardownL1Hop(h, circuitID);
-			if (response != ISDNConnectorResponse.SUCCESS)
-				return response;
-
-			response = teardownL2Hop(h, circuitID);
-			if (response != ISDNConnectorResponse.SUCCESS)
-				return response;
+			// Check for capabilities
+			if (h.getCapabilities().contains(SDNCapability.L2)) {
+				if (!h.isEntryHop() && !h.isExitHop())
+					response = teardownL2Bypass(h, circuitID);
+				else
+					response = teardownL2Hop(h, circuitID);
+				if (response != ISDNConnectorResponse.SUCCESS)
+					return response;
+			}
+			else {
+				response = teardownL1Hop(h, circuitID);
+				if (response != ISDNConnectorResponse.SUCCESS)
+					return response;
+			}
 		}
 
 		return ISDNConnectorResponse.SUCCESS;
