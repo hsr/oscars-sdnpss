@@ -57,16 +57,6 @@ public interface ISDNConnector {
     
 
     /**
-     * SDN Connector specific implementation of a circuit setup action with the given 
-     * list of hops.
-     * 
-     * @param hops a list of SDNHops (List<SDNHop>) that describes each hop in the circuit
-     * @throws Exception 
-     */
-	public ISDNConnectorResponse setupCircuit(List<SDNHop> hops,
-			String circuitID) throws Exception;
-    
-    /**
 	 * SDN Connector specific implementation of a circuit setup action with the given 
 	 * list of hops and a string with an OpenFlow rule that specify OFMatch and 
 	 * OFActions for this circuit.

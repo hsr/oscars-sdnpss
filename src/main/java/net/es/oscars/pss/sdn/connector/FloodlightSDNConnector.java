@@ -215,7 +215,6 @@ public class FloodlightSDNConnector implements ISDNConnector {
 			   reverseEntry = rule.reverse();
 		
 		ISDNConnectorResponse response;
-		
 
 		forwardEntry.put("in_port", h.getSrcPort());
 		forwardEntry.put("output", h.getDstPort());
@@ -295,12 +294,6 @@ public class FloodlightSDNConnector implements ISDNConnector {
 
 	@Override
 	public ISDNConnectorResponse setupCircuit(List<SDNHop> hops,
-			String circuitID) throws Exception {
-		return setupCircuit(hops, circuitID, null);
-	}
-
-	@Override
-	public ISDNConnectorResponse setupCircuit(List<SDNHop> hops,
 			String circuitID, OFRule rule) throws Exception {
 		if (controller == null) {
 			return ISDNConnectorResponse.CONTROLLER_NOT_SET;
@@ -369,14 +362,22 @@ public class FloodlightSDNConnector implements ISDNConnector {
 					hopRefCount.remove(h);
 				}
 			}
-
-			response = teardownL1Hop(h, circuitID);
-			if (response != ISDNConnectorResponse.SUCCESS)
-				return response;
 			
-			response = teardownL2Hop(h, circuitID);
-			if (response != ISDNConnectorResponse.SUCCESS)
-				return response;
+
+			// Check for capabilities
+			if (h.getCapabilities().contains(SDNCapability.L2)) {
+				if (!h.isEntryHop() && !h.isExitHop())
+					response = teardownL2Bypass(h, circuitID);
+				else
+					response = teardownL2Hop(h, circuitID);
+				if (response != ISDNConnectorResponse.SUCCESS)
+					return response;
+			}
+			else {
+				response = teardownL1Hop(h, circuitID);
+				if (response != ISDNConnectorResponse.SUCCESS)
+					return response;
+			}
 		}
 
 		return ISDNConnectorResponse.SUCCESS;
